@@ -417,4 +417,398 @@ const VIEWS = {
 
     // avg7
     ctx.strokeStyle="#2ea043"; ctx.lineWidth=2; ctx.beginPath();
-    avg7.forEach((v,i)=>{ const x=i
+    avg7.forEach((v,i)=>{ const x=i*xStep, yy=y(v); i?ctx.lineTo(x,yy):ctx.moveTo(x,yy); });
+    ctx.stroke();
+
+    // starting baseline
+    if (startW!=null){
+      ctx.strokeStyle="#7f95a6"; ctx.setLineDash([6,4]); ctx.beginPath();
+      const yy=y(startW); ctx.moveTo(0,yy); ctx.lineTo(W,yy); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+
+  render();
+ },
+
+ /* ---------- NUTRITION with MACRO RING ---------- */
+ nutrition(){
+  const s = ls("settings")||{kcal:2400, protein:180};
+  const kcalGoal=s.kcal||2400, proteinGoal=s.protein||180;
+
+  view.innerHTML = `
+    <section class="panel"><h2>Today</h2>
+      <div class="progress"><div id="kcalBar" style="width:0%"></div></div>
+      <div class="row"><div><strong id="kcalNow">0</strong> / <span>${kcalGoal}</span> kcal</div>
+      <div><strong id="proteinNow">0</strong> / <span>${proteinGoal}</span> g protein</div></div>
+    </section>
+    <section class="panel grid">
+      <div>
+        <h2>Nutrition Ring</h2>
+        <canvas id="macroRing" class="ring"></canvas>
+        <p class="small" id="macroText">P 0g • C 0g • F 0g</p>
+      </div>
+      <div>
+        <h2>Add Food</h2>
+        <input id="q" placeholder="Search: egg, oatmeal, pizza">
+        <div id="results" class="list"></div>
+      </div>
+    </section>
+    <section class="panel"><h2>Log</h2>
+      <table><thead><tr><th>Food</th><th>Qty</th><th>kcal</th><th>P</th><th>C</th><th>F</th><th></th></tr></thead>
+      <tbody id="logBody"></tbody></table>
+    </section>
+    <section class="panel"><h2>Add Custom Food</h2>
+      <div class="row">
+        <input id="cName" placeholder="Name">
+        <input id="cQty" type="number" placeholder="serving size">
+        <input id="cK" type="number" placeholder="kcal">
+        <input id="cP" type="number" placeholder="P">
+        <input id="cC" type="number" placeholder="C">
+        <input id="cF" type="number" placeholder="F">
+        <button class="btn" id="addCustom">Save</button>
+      </div>
+      <p class="small">Tip: Add your common meals here once, then reuse them fast.</p>
+    </section>`;
+
+  function totals(){
+    const log=ls("foodLog")||{}; const day=log[todayISO()]||[];
+    return day.reduce((acc,x)=>({k:acc.k+x.kcal, p:acc.p+x.protein, c:acc.c+x.carbs, f:acc.f+x.fat}),{k:0,p:0,c:0,f:0});
+  }
+  function renderTotals(){
+    const t=totals(); $("#kcalNow").textContent=Math.round(t.k); $("#proteinNow").textContent=Math.round(t.p);
+    $("#kcalBar").style.width = Math.min(100, Math.round((t.k/Math.max(1,kcalGoal))*100)) + "%";
+    const tbody=$("#logBody"); const log=ls("foodLog")||{}; const day=log[todayISO()]||[]; tbody.innerHTML="";
+    day.forEach((x,i)=>{
+      const tr=document.createElement("tr");
+      tr.innerHTML = `<td>${x.name}</td><td>${x.qty}</td><td>${Math.round(x.kcal)}</td><td>${Math.round(x.protein)}</td><td>${Math.round(x.carbs)}</td><td>${Math.round(x.fat)}</td><td><button data-i="${i}" class="btn btn-ghost">✕</button></td>`;
+      tbody.append(tr);
+    });
+    tbody.querySelectorAll("button[data-i]").forEach(b=>b.onclick=()=>{ const log=ls("foodLog")||{}; const day=log[todayISO()]||[]; day.splice(+b.dataset.i,1); log[todayISO()]=day; ls("foodLog",log); renderTotals(); drawRing(); });
+    $("#macroText").textContent = `P ${Math.round(t.p)}g • C ${Math.round(t.c)}g • F ${Math.round(t.f)}g`;
+  }
+  function addFood(it, qty){
+    const log=ls("foodLog")||{}; const day=log[todayISO()]||[]; const q=Number(qty)||1;
+    day.push({name:it.name, qty:q, kcal:it.kcal*q, protein:it.protein*q, carbs:it.carbs*q, fat:it.fat*q});
+    log[todayISO()]=day; ls("foodLog", log); renderTotals(); drawRing();
+  }
+  function drawRing(){
+    const t=totals(); const sum=Math.max(1, t.p+t.c+t.f);
+    const c=$("#macroRing"), ctx=c.getContext("2d"); const W=c.width=c.clientWidth, H=c.height=c.clientHeight, R=Math.min(W,H)/2-12;
+    ctx.clearRect(0,0,W,H); const cx=W/2, cy=H/2; const parts=[{v:t.p,label:"P",col:"#e8eef5"},{v:t.c,label:"C",col:"#2ea043"},{v:t.f,label:"F",col:"#7f95a6"}];
+    let a0=-Math.PI/2; parts.forEach(p=>{ const ang=(p.v/sum)*Math.PI*2; ctx.beginPath(); ctx.strokeStyle=p.col; ctx.lineWidth=24; ctx.arc(cx,cy,R,a0,a0+ang); ctx.stroke(); a0+=ang; });
+    // center hole
+    ctx.beginPath(); ctx.fillStyle="#0e1622"; ctx.arc(cx,cy,R-20,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#c9d7e1"; ctx.textAlign="center"; ctx.font="14px system-ui"; ctx.fillText("Macros", cx, cy-6);
+    ctx.font="18px system-ui"; ctx.fillText(`${Math.round(t.p)}/${Math.round(sum)} g P`, cx, cy+18);
+  }
+
+  $("#q").oninput = e=>{
+    const q=e.target.value.toLowerCase().trim(); const res=$("#results"); res.innerHTML="";
+    if(!q) return;
+    FOODS.filter(f=>f.name.toLowerCase().includes(q)).slice(0,20).forEach(it=>{
+      const el=document.createElement("div"); el.className="item";
+      el.innerHTML = `<div><strong>${it.name}</strong> <span class="badge">per ${it.unit}</span>
+        <div class="small">kcal ${it.kcal} • P ${it.protein} • C ${it.carbs} • F ${it.fat}</div></div>
+        <div class="row"><input type="number" placeholder="Qty" value="1" style="max-width:90px"><button class="btn">Add</button></div>`;
+      const qty = el.querySelector("input");
+      el.querySelector("button").onclick = ()=>addFood(it, qty.value);
+      res.append(el);
+    });
+  };
+  $("#addCustom").onclick = ()=>{
+    const name=$("#cName").value||"Custom", unit=$("#cQty").value||"1";
+    const K=+($("#cK").value||0), P=+($("#cP").value||0), C=+($("#cC").value||0), F=+($("#cF").value||0);
+    addFood({name,unit,kcal:K,protein:P,carbs:C,fat:F},1);
+    ["cName","cQty","cK","cP","cC","cF"].forEach(id=>$("#"+id).value="");
+  };
+
+  renderTotals(); drawRing();
+ },
+
+ /* ---------- DIRECTORY (searchable; pics + optional video) ---------- */
+ directory(){
+   view.innerHTML = `
+     <section class="panel"><h2>Directory</h2>
+       <div class="row">
+         <input id="dSearch" placeholder="Search exercises, warm-ups, cooldowns…">
+         <select id="dFilter"><option value="">All</option><option value="warmup">Warm-up</option><option value="strength">Workout</option><option value="core">Workout (core)</option><option value="cooldown">Cooldown</option></select>
+       </div>
+     </section>
+     <section class="panel"><div id="dList" class="list"></div></section>
+     <section class="panel"><h2>How to add videos</h2>
+       <p class="small">Edit the <strong>ACTIVITY_DB</strong> at the top of this file. Put a YouTube share link or MP4 in the <code>video</code> field. The card will embed it automatically.</p>
+     </section>
+   `;
+   function matches(q, item){
+     q=q.toLowerCase(); return !q || item.name.toLowerCase().includes(q) || (item.how||"").toLowerCase().includes(q);
+   }
+   function render(){
+     const q=$("#dSearch").value||""; const f=$("#dFilter").value||"";
+     const base=[...EXERCISES.map(x=>({id:x.id,name:x.name,category:x.type,how:x.how,cues:x.cues,svg:x.svg,video:""})),...ACTIVITY_DB];
+     const list=$("#dList"); list.innerHTML="";
+     base.filter(x=>matches(q,x) && (!f || x.category===f)).forEach(x=>{
+       const el=document.createElement("div"); el.className="item";
+       el.innerHTML = `
+         <div class="row" style="align-items:center;gap:12px">
+           <div class="svg">${x.svg||""}</div>
+           <div style="flex:1">
+             <div><strong>${x.name}</strong> <span class="tag">${x.category||"activity"}</span></div>
+             <div class="small" style="margin-top:6px">${x.how||""}</div>
+             <div class="small" style="margin-top:6px">${(x.cues||[]).map(c=>"• "+c).join("<br>")}</div>
+           </div>
+         </div>
+         ${x.video? embedVideo(x.video) : ""}`;
+       list.append(el);
+     });
+   }
+   function embedVideo(url){
+     if (/youtube\.com|youtu\.be/.test(url)){
+       const id = (url.match(/(?:v=|be\/)([A-Za-z0-9_\-]+)/)||[])[1] || "";
+       return `<div class="media" style="margin-top:10px"><iframe width="100%" height="100%" src="https://www.youtube.com/embed/${id}" frameborder="0" allowfullscreen></iframe></div>`;
+     }
+     return `<video class="media" style="margin-top:10px" src="${url}" controls></video>`;
+   }
+   $("#dSearch").oninput=render; $("#dFilter").onchange=render; render();
+ },
+
+ /* ---------- MEASUREMENTS with body diagram ---------- */
+ measure(){
+  view.innerHTML = `
+    <section class="panel grid">
+      <div>
+        <h2>Measurements</h2>
+        <div class="row">
+          <input id="mDate" type="date" value="${todayISO()}">
+          <button class="btn" id="saveM">Save</button>
+        </div>
+        <div class="kv" style="margin-top:8px">
+          <label>Neck</label><input id="mNeck" type="number" step="0.1" placeholder="in">
+          <label>Chest</label><input id="mChest" type="number" step="0.1" placeholder="in">
+          <label>Waist</label><input id="mWaist" type="number" step="0.1" placeholder="in">
+          <label>Hips</label><input id="mHips" type="number" step="0.1" placeholder="in">
+          <label>Thigh</label><input id="mThigh" type="number" step="0.1" placeholder="in">
+          <label>Calf</label><input id="mCalf" type="number" step="0.1" placeholder="in">
+          <label>Bicep</label><input id="mBicep" type="number" step="0.1" placeholder="in">
+          <label>Forearm</label><input id="mFore" type="number" step="0.1" placeholder="in">
+        </div>
+      </div>
+      <div>
+        <h2>Where to Measure</h2>
+        <div class="card">
+          ${bodySVG()}
+          <p class="small" style="margin-top:6px">
+            • <b>Neck:</b> below Adam’s apple • <b>Chest:</b> nipple line • <b>Waist:</b> narrowest torso • <b>Hips:</b> widest butt/hip •
+            <b>Thigh:</b> 6–8" above knee • <b>Calf:</b> widest girth • <b>Bicep/Forearm:</b> widest point, arm relaxed.
+          </p>
+        </div>
+      </div>
+    </section>
+    <section class="panel"><h2>History</h2><div id="mList" class="list"></div></section>
+  `;
+
+  $("#saveM").onclick=()=>{
+    const rec={date:$("#mDate").value||todayISO(), neck:+($("#mNeck").value||0), chest:+($("#mChest").value||0), waist:+($("#mWaist").value||0), hips:+($("#mHips").value||0), thigh:+($("#mThigh").value||0), calf:+($("#mCalf").value||0), bicep:+($("#mBicep").value||0), forearm:+($("#mFore").value||0)};
+    const arr=ls("measurements")||[]; const i=arr.findIndex(x=>x.date===rec.date); if(i>=0) arr[i]=rec; else arr.push(rec);
+    arr.sort((a,b)=>a.date.localeCompare(b.date)); ls("measurements",arr); render();
+    alert("Saved ✅");
+  };
+
+  function render(){
+    const arr=(ls("measurements")||[]).sort((a,b)=>a.date.localeCompare(b.date));
+    const list=$("#mList"); list.innerHTML="";
+    if(!arr.length){ list.innerHTML=`<div class="item">No measurements yet.</div>`; return; }
+    arr.forEach(r=>{
+      const el=document.createElement("div"); el.className="item";
+      el.innerHTML = `<strong>${r.date}</strong><div class="small">Neck ${r.neck}" • Chest ${r.chest}" • Waist ${r.waist}" • Hips ${r.hips}" • Thigh ${r.thigh}" • Calf ${r.calf}" • Bicep ${r.bicep}" • Forearm ${r.forearm}"</div>`;
+      list.append(el);
+    });
+  }
+  function bodySVG(){
+    return `<svg viewBox="0 0 220 360" width="100%" xmlns="http://www.w3.org/2000/svg" style="background:#0e1622;border:1px solid var(--border);border-radius:10px">
+      <g fill="none" stroke="#9bb0bf" stroke-width="2">
+        <path d="M110 20 q-20 10 -22 32 q-4 25 -12 40 q-10 18 -10 40 v60 q0 40 14 70 q10 20 30 30 q20 -10 30 -30 q14 -30 14 -70 v-60 q0 -22 -10 -40 q-8 -15 -12 -40 q-2 -22 -22 -32" />
+        <circle cx="110" cy="20" r="10"/>
+      </g>
+      <!-- measurement bands -->
+      <g stroke="#2ea043" stroke-width="3">
+        <line x1="60" y1="50" x2="160" y2="50"/><text x="165" y="52" fill="#e8eef5" font-size="10">Neck</text>
+        <line x1="40" y1="100" x2="180" y2="100"/><text x="185" y="102" fill="#e8eef5" font-size="10">Chest</text>
+        <line x1="55" y1="150" x2="165" y2="150"/><text x="170" y="152" fill="#e8eef5" font-size="10">Waist</text>
+        <line x1="40" y1="190" x2="180" y2="190"/><text x="185" y="192" fill="#e8eef5" font-size="10">Hips</text>
+        <line x1="30" y1="250" x2="95" y2="250"/><text x="20" y="248" fill="#e8eef5" font-size="10">Thigh</text>
+        <line x1="125" y1="250" x2="190" y2="250"/><text x="192" y="248" fill="#e8eef5" font-size="10">Thigh</text>
+        <line x1="35" y1="300" x2="90" y2="300"/><text x="22" y="302" fill="#e8eef5" font-size="10">Calf</text>
+        <line x1="130" y1="300" x2="185" y2="300"/><text x="188" y="302" fill="#e8eef5" font-size="10">Calf</text>
+        <line x1="25" y1="140" x2="70" y2="140"/><text x="10" y="142" fill="#e8eef5" font-size="10">Bicep</text>
+        <line x1="150" y1="140" x2="195" y2="140"/><text x="198" y="142" fill="#e8eef5" font-size="10">Bicep</text>
+        <line x1="20" y1="165" x2="65" y2="165"/><text x="3" y="167" fill="#e8eef5" font-size="10">Forearm</text>
+        <line x1="155" y1="165" x2="200" y2="165"/><text x="202" y="167" fill="#e8eef5" font-size="10">Forearm</text>
+      </g>
+    </svg>`;
+  }
+  render();
+ },
+
+ /* ---------- NOTES ---------- */
+ notes(){
+   view.innerHTML = `
+    <section class="panel"><h2>Notes</h2>
+      <div class="row">
+        <input id="nDate" type="date" value="${todayISO()}">
+      </div>
+      <textarea id="nText" rows="4" placeholder="Write your note…"></textarea>
+      <div style="height:8px"></div>
+      <button class="btn" id="saveN">Save Note</button>
+    </section>
+    <section class="panel"><h2>History</h2><div id="nList" class="list"></div></section>
+   `;
+   $("#saveN").onclick=()=>{
+     const arr=ls("notes")||[]; const rec={date:$("#nDate").value||todayISO(), text:$("#nText").value||""};
+     const i=arr.findIndex(x=>x.date===rec.date); if(i>=0) arr[i]=rec; else arr.unshift(rec);
+     ls("notes",arr); render(); alert("Saved ✅");
+   };
+   function render(){
+     const arr=(ls("notes")||[]); const list=$("#nList"); list.innerHTML="";
+     if(!arr.length){ list.innerHTML=`<div class="item">No notes yet.</div>`; return; }
+     arr.forEach((r,idx)=>{
+       const el=document.createElement("div"); el.className="item";
+       el.innerHTML=`<div class="row" style="align-items:start"><strong style="min-width:110px">${r.date}</strong><div style="flex:1;white-space:pre-wrap">${r.text}</div><button class="btn btn-ghost" data-del="${idx}">Delete</button></div>`;
+       list.append(el);
+     });
+     list.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ const arr=ls("notes")||[]; arr.splice(+b.dataset.del,1); ls("notes",arr); render(); });
+   }
+   render();
+ },
+
+ /* ---------- 1-MILE TEST ---------- */
+ test(){
+  view.innerHTML = `
+   <section class="panel"><h2>1-Mile Walk Test</h2>
+     <div class="row"><button class="btn" id="start">Start</button><button class="btn" id="stop">Stop</button></div>
+     <h2 id="timer">0:00</h2>
+   </section>
+   <section class="panel"><h2>Results</h2><div id="results" class="list"></div></section>`;
+  const tEl=$("#timer");
+  let t=null, start=0;
+  const fmt = ms => { const s=Math.floor(ms/1000), m=Math.floor(s/60), ss=String(s%60).padStart(2,"0"); return `${m}:${ss}`; };
+  $("#start").onclick=()=>{ if(t) clearInterval(t); start=Date.now(); t=setInterval(()=>{ tEl.textContent=fmt(Date.now()-start); },250); };
+  $("#stop").onclick=()=>{ if(!t) return; clearInterval(t); const ms=Date.now()-start;
+    const rec={date: todayISO(), timeSec: Math.floor(ms/1000)};
+    const tests=ls("mileTests")||[]; tests.push(rec); ls("mileTests", tests);
+    renderResults(); alert("Saved ✅");
+  };
+  function renderResults(){
+    const list = $("#results"); list.innerHTML="";
+    const tests=(ls("mileTests")||[]).sort((a,b)=>a.date.localeCompare(b.date));
+    tests.forEach(r=>{ const m=Math.floor(r.timeSec/60), s=String(r.timeSec%60).padStart(2,"0");
+      list.innerHTML += `<div class="item"><strong>${r.date}</strong> — ${m}:${s}</div>`;
+    });
+  }
+  renderResults();
+ },
+
+ /* ---------- SETTINGS ---------- */
+ settings(){
+  const s = ls("settings")||{kcal:2400,protein:180};
+  const start = ls("startDateISO");
+  view.innerHTML = `
+    <section class="panel"><h2>Settings</h2>
+      <div class="kv">
+        <label>Plan start date</label><input id="startDate" type="date" />
+        <label>Calories target</label><input id="kcal" type="number" placeholder="e.g., 2400" value="${s.kcal||2400}" />
+        <label>Protein target (g)</label><input id="protein" type="number" placeholder="e.g., 180" value="${s.protein||180}" />
+      </div>
+      <div style="height:12px"></div>
+      <button class="btn" id="save">Save</button>
+      <p class="small" style="margin-top:8px">Data is stored locally on this device (no accounts).</p>
+      <div style="height:12px"></div>
+      <div class="row">
+        <button class="btn" id="exportBtn">Export Data</button>
+        <input id="importFile" type="file" accept="application/json" style="display:none">
+        <button class="btn" id="importBtn">Import Data</button>
+      </div>
+    </section>`;
+  if (start) $("#startDate").value = start.slice(0,10);
+  $("#save").onclick=()=>{
+    const d=$("#startDate").value; if(d) ls("startDateISO", new Date(d).toISOString());
+    const kcal=+($("#kcal").value||0), protein=+($("#protein").value||0);
+    ls("settings",{kcal,protein}); alert("Saved ✅");
+  };
+
+  // Export
+  $("#exportBtn").onclick = ()=>{
+    const dump = {
+      log: ls("log")||[],
+      mileTests: ls("mileTests")||[],
+      foodLog: ls("foodLog")||{},
+      settings: ls("settings")||{},
+      startDateISO: ls("startDateISO")||null,
+      weights: ls("weights")||[],
+      startWeight: ls("startWeight")||null,
+      measurements: ls("measurements")||[],
+      notes: ls("notes")||[]
+    };
+    const blob = new Blob([JSON.stringify(dump,null,2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `justin-workout-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+  };
+
+  // Import
+  $("#importBtn").onclick = ()=> $("#importFile").click();
+  $("#importFile").onchange = async (e)=>{
+    const file = e.target.files[0]; if (!file) return;
+    const text = await file.text();
+    try {
+      const data = JSON.parse(text);
+      ["log","mileTests","foodLog","settings","startDateISO","weights","startWeight","measurements","notes"].forEach(k=>{
+        if (data[k]!==undefined) ls(k, data[k]);
+      });
+      alert("Import complete ✅  (Reopen tabs to see updates)");
+    } catch(e){ alert("Import failed: invalid file"); }
+  };
+ }
+};
+
+/* ===================== ROUTER ===================== */
+function switchView(k){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.view===k));
+  (VIEWS[k]||VIEWS.home)();
+}
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>switchView(t.dataset.view));
+VIEWS.home();
+
+/* ===================== INLINE MANIFEST & SW ===================== */
+const manifest = { name:"Justin Workout", short_name:"Workout", start_url:".", display:"standalone",
+  background_color:"#0c0f15", theme_color:"#131a24", icons:[] };
+const blob = new Blob([JSON.stringify(manifest)], {type: "application/manifest+json"});
+const murl = URL.createObjectURL(blob);
+const link = document.createElement('link'); link.rel='manifest'; link.href=murl; document.head.appendChild(link);
+
+// bump CACHE to force update if needed
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE='jw-onefile-v3';
+    self.addEventListener('install', e=>{
+      e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./'])));
+      self.skipWaiting();
+    });
+    self.addEventListener('activate', e=>{
+      e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
+      self.clients.claim();
+    });
+    self.addEventListener('fetch', e=>{
+      if(e.request.method!=='GET') return;
+      e.respondWith(caches.match(e.request).then(cached=>cached||fetch(e.request).then(res=>{
+        const copy=res.clone(); caches.open(CACHE).then(c=>c.put(e.request,copy)); return res;
+      }).catch(()=>cached||caches.match('./'))));
+    });
+  `;
+  const swBlob = new Blob([swCode], {type:'text/javascript'});
+  const swUrl = URL.createObjectURL(swBlob);
+  window.addEventListener('load', ()=>navigator.serviceWorker.register(swUrl));
+}
+</script>
+</body>
+</html>
