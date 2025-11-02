@@ -14,7 +14,7 @@ html,body{margin:0;padding:0;height:100%;font-family:-apple-system,system-ui,Seg
 header{padding:22px 16px 8px;background:linear-gradient(180deg,var(--panel),var(--bg))}
 h1{margin:0;font-size:24px;letter-spacing:.3px}
 .subtitle{margin:4px 0 0;color:var(--muted);font-size:13px}
-nav{position:sticky;top:0;background:var(--bg);padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap}
+nav{position:sticky;top:0;background:var(--bg);padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;z-index:2}
 .tab{padding:8px 12px;border:1px solid var(--border);border-radius:12px;background:#0f1622;color:var(--text);font-weight:600;cursor:pointer}
 .tab.active{outline:2px solid var(--accent)}
 main{padding:16px}
@@ -25,9 +25,11 @@ main{padding:16px}
 .badge{background:var(--accent);color:#08140a;border-radius:10px;padding:2px 8px;font-weight:700;font-size:12px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 input,textarea,select{width:100%;background:#0e1622;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px}
-input[type=number]{max-width:120px}
+input[type=number]{max-width:140px}
+input[type=date]{max-width:200px}
 .btn{border-radius:10px;padding:10px 14px;border:1px solid var(--border);background:#162233;color:var(--text);font-weight:600;cursor:pointer}
 .btn:active{transform:scale(.98)}
+.btn-ghost{background:transparent}
 .progress{height:10px;background:#0e1622;border:1px solid var(--border);border-radius:8px;overflow:hidden}
 .progress>div{height:100%;background:var(--accent)}
 table{width:100%;border-collapse:collapse}
@@ -36,12 +38,20 @@ td,th{border-bottom:1px solid var(--border);padding:8px;text-align:left;font-siz
 footer{padding:16px;text-align:center;color:var(--muted)}
 .svg{height:80px;border:1px solid var(--border);border-radius:10px;padding:6px;background:#0e1622}
 .small{font-size:12px;color:#9bb0bf}
+.chart{width:100%;height:220px;border:1px solid var(--border);border-radius:8px;background:#0e1622}
+.ring{width:220px;height:220px;border:1px solid var(--border);border-radius:8px;background:#0e1622}
+.card{background:#101826;border:1px solid var(--border);border-radius:12px;padding:12px}
+.media{width:100%;max-width:560px;aspect-ratio:16/9;border:1px solid var(--border);border-radius:10px;background:#0e1622}
+.grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:680px){.grid{grid-template-columns:1fr 1fr}}
+.label{font-weight:700}
+.tag{display:inline-block;padding:2px 8px;border:1px solid var(--border);border-radius:10px;margin-right:6px;color:#c9d7e1}
 </style>
 </head>
 <body>
 <header>
   <h1>Justin Workout</h1>
-  <p class="subtitle">4-week plan • timers • 1-mile test • nutrition (offline)</p>
+  <p class="subtitle">4-week plan • timers • 1-mile test • nutrition • weight trends • measurements</p>
 </header>
 
 <nav id="tabs">
@@ -49,9 +59,12 @@ footer{padding:16px;text-align:center;color:var(--muted)}
   <button class="tab" data-view="today">Today</button>
   <button class="tab" data-view="week">This Week</button>
   <button class="tab" data-view="log">Log</button>
-  <button class="tab" data-view="test">1-Mile Test</button>
+  <button class="tab" data-view="weight">Weight</button>
   <button class="tab" data-view="nutrition">Nutrition</button>
-  <button class="tab" data-view="library">Library</button>
+  <button class="tab" data-view="directory">Directory</button>
+  <button class="tab" data-view="measure">Measurements</button>
+  <button class="tab" data-view="notes">Notes</button>
+  <button class="tab" data-view="test">1-Mile Test</button>
   <button class="tab" data-view="settings">Settings</button>
 </nav>
 
@@ -59,7 +72,7 @@ footer{padding:16px;text-align:center;color:var(--muted)}
 <footer>© 2025 Justin — PWA</footer>
 
 <script>
-/* -------- data -------- */
+/* ===================== DATA ===================== */
 const EXERCISES = [
   {id:"warm_walk",name:"5–10 min Easy Walk",type:"warmup",
    how:"Walk at a pace that raises breathing but allows nasal breathing. Shoulders relaxed.",
@@ -85,6 +98,21 @@ const EXERCISES = [
    how:"Hands on counter/bench, body straight. Lower with control, press away.",
    cues:["Elbows 30–45°","Squeeze glutes"],equipment:"counter",
    svg:"<svg viewBox='0 0 200 120' xmlns='http://www.w3.org/2000/svg'><g fill='none' stroke='white' stroke-width='4'><path d='M20 90 h60'/><path d='M80 90 l60 -30'/><circle cx='140' cy='60' r='8'/></g></svg>"
+  }
+];
+
+// Activity Directory DB (add more items anytime)
+const ACTIVITY_DB = [
+  {id:"wu_arm_circles",name:"Arm Circles",category:"warmup",
+   how:"Stand tall, circle arms forward/back 10–20 reps.", cues:["Ribs down","Easy range"],
+   svg:"<svg viewBox='0 0 180 120' xmlns='http://www.w3.org/2000/svg'><g fill='none' stroke='white' stroke-width='3'><circle cx='90' cy='20' r='8'/><path d='M90 28 v28'/><path d='M90 40 l-30 10 M90 40 l30 10' stroke-dasharray='4 3'/></g></svg>",
+   video:"" // YouTube or MP4 link; leave blank if none
+  },
+  {id:"cd_box_breath",name:"Box Breathing",category:"cooldown",
+   how:"Inhale 4 • Hold 4 • Exhale 4 • Hold 4. Repeat 4–8 rounds.",
+   cues:["Quiet nose breathing","Relax shoulders"],
+   svg:"<svg viewBox='0 0 180 120' xmlns='http://www.w3.org/2000/svg'><rect x='40' y='20' width='100' height='80' rx='8' ry='8' fill='none' stroke='white' stroke-width='3'/></svg>",
+   video:""
   }
 ];
 
@@ -138,7 +166,7 @@ const FOODS = [
  {name:"Ground beef 80/20 (100g)",unit:"100 g",kcal:254,protein:17,carbs:0,fat:20}
 ];
 
-/* -------- helpers -------- */
+/* ===================== HELPERS ===================== */
 const $ = sel => document.querySelector(sel);
 const view = $("#view");
 const todayISO = () => new Date().toISOString().slice(0,10);
@@ -152,19 +180,27 @@ function getWeekIndex() {
   return Math.min(3, Math.floor(diff/7));
 }
 function weekdayName(d){return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d];}
+function isoOffset(days){ const d=new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
 
-/* -------- views -------- */
+/* ===================== VIEWS ===================== */
 const VIEWS = {
  home(){
    view.innerHTML = `
      <section class="panel"><h2>Welcome</h2>
-       <p>Tap a tab above. Try <strong>Today</strong> to log a session, or <strong>Nutrition</strong> to track calories & protein.</p>
+       <p>Tap a tab above. Try <strong>Today</strong> to log a session, <strong>Nutrition</strong> for the ring, or <strong>Weight</strong> to track trends.</p>
      </section>
-     <section class="panel"><h2>Quick Links</h2>
-       <div class="row">
-         <button class="btn" data-go="today">Today's Workout</button>
-         <button class="btn" data-go="nutrition">Nutrition</button>
-         <button class="btn" data-go="test">1-Mile Test</button>
+     <section class="panel grid">
+       <div class="card">
+         <h3>Quick Add (Today)</h3>
+         <div class="row">
+           <button class="btn" data-go="today">Today's Workout</button>
+           <button class="btn" data-go="nutrition">Nutrition</button>
+           <button class="btn" data-go="weight">Weight</button>
+         </div>
+       </div>
+       <div class="card">
+         <h3>This Week Objective</h3>
+         <p class="small">${PLAN.weeks[getWeekIndex()].objective}</p>
        </div>
      </section>`;
    view.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>switchView(b.dataset.go));
@@ -271,186 +307,114 @@ const VIEWS = {
   $("#streak").textContent = `${streak} day streak`;
  },
 
- test(){
-  view.innerHTML = `
-   <section class="panel"><h2>1-Mile Walk Test</h2>
-     <div class="row"><button class="btn" id="start">Start</button><button class="btn" id="stop">Stop</button></div>
-     <h2 id="timer">0:00</h2>
-   </section>
-   <section class="panel"><h2>Results</h2><div id="results" class="list"></div></section>`;
-  const tEl=$("#timer");
-  let t=null, start=0;
-  const fmt = ms => { const s=Math.floor(ms/1000), m=Math.floor(s/60), ss=String(s%60).padStart(2,"0"); return `${m}:${ss}`; };
-  $("#start").onclick=()=>{ if(t) clearInterval(t); start=Date.now(); t=setInterval(()=>{ tEl.textContent=fmt(Date.now()-start); },250); };
-  $("#stop").onclick=()=>{ if(!t) return; clearInterval(t); const ms=Date.now()-start;
-    const rec={date: todayISO(), timeSec: Math.floor(ms/1000)};
-    const tests=ls("mileTests")||[]; tests.push(rec); ls("mileTests", tests);
-    renderResults(); alert("Saved ✅");
-  };
-  function renderResults(){
-    const list = $("#results"); list.innerHTML="";
-    const tests=(ls("mileTests")||[]).sort((a,b)=>a.date.localeCompare(b.date));
-    tests.forEach(r=>{ const m=Math.floor(r.timeSec/60), s=String(r.timeSec%60).padStart(2,"0");
-      list.innerHTML += `<div class="item"><strong>${r.date}</strong> — ${m}:${s}</div>`;
-    });
-  }
-  renderResults();
- },
+ /* ---------- NEW: WEIGHT (3-month window, editable/backfill) ---------- */
+ weight(){
+  const weights = ls("weights")||[]; // [{date:'YYYY-MM-DD', val:Number}]
+  if (!ls("startWeight") && weights.length) ls("startWeight", weights[0].val);
 
- nutrition(){
-  const s = ls("settings")||{kcal:2400, protein:180};
-  const kcalGoal=s.kcal||2400, proteinGoal=s.protein||180;
   view.innerHTML = `
-    <section class="panel"><h2>Today</h2>
-      <div class="progress"><div id="kcalBar" style="width:0%"></div></div>
-      <div class="row"><div><strong id="kcalNow">0</strong> / <span>${kcalGoal}</span> kcal</div>
-      <div><strong id="proteinNow">0</strong> / <span>${proteinGoal}</span> g protein</div></div>
-    </section>
-    <section class="panel"><h2>Add Food</h2>
-      <input id="q" placeholder="Search: egg, oatmeal, pizza">
-      <div id="results" class="list"></div>
-    </section>
-    <section class="panel"><h2>Log</h2>
-      <table><thead><tr><th>Food</th><th>Qty</th><th>kcal</th><th>P</th><th>C</th><th>F</th><th></th></tr></thead>
-      <tbody id="logBody"></tbody></table>
-    </section>
-    <section class="panel"><h2>Add Custom Food</h2>
+    <section class="panel"><h2>Weight</h2>
       <div class="row">
-        <input id="cName" placeholder="Name">
-        <input id="cQty" type="number" placeholder="serving size">
-        <input id="cK" type="number" placeholder="kcal">
-        <input id="cP" type="number" placeholder="P">
-        <input id="cC" type="number" placeholder="C">
-        <input id="cF" type="number" placeholder="F">
-        <button class="btn" id="addCustom">Save</button>
+        <input id="wtDate" type="date" value="${todayISO()}">
+        <input id="wtVal" type="number" step="0.1" placeholder="Weight (lbs or kg)">
+        <button class="btn" id="saveWt">Save</button>
       </div>
-      <p class="small">Tip: Add your common meals here once, then reuse them fast.</p>
-    </section>`;
-  function renderTotals(){
-    const log=ls("foodLog")||{}; const day=log[todayISO()]||[];
-    let K=0,P=0,C=0,F=0; day.forEach(x=>{K+=x.kcal;P+=x.protein;C+=x.carbs;F+=x.fat;});
-    $("#kcalNow").textContent=Math.round(K); $("#proteinNow").textContent=Math.round(P);
-    $("#kcalBar").style.width = Math.min(100, Math.round((K/Math.max(1,kcalGoal))*100)) + "%";
-    const tbody=$("#logBody"); tbody.innerHTML="";
-    day.forEach((x,i)=>{
-      const tr=document.createElement("tr");
-      tr.innerHTML = `<td>${x.name}</td><td>${x.qty}</td><td>${Math.round(x.kcal)}</td><td>${Math.round(x.protein)}</td><td>${Math.round(x.carbs)}</td><td>${Math.round(x.fat)}</td><td><button data-i="${i}" class="btn btn-del">✕</button></td>`;
-      tbody.append(tr);
-    });
-    tbody.querySelectorAll(".btn-del").forEach(b=>b.onclick=()=>{
-      const idx=+b.dataset.i; day.splice(idx,1); log[todayISO()]=day; ls("foodLog",log); renderTotals();
-    });
-  }
-  function addFood(it, qty){
-    const log=ls("foodLog")||{}; const day=log[todayISO()]||[];
-    const q=Number(qty)||1;
-    day.push({name:it.name, qty:q, kcal:it.kcal*q, protein:it.protein*q, carbs:it.carbs*q, fat:it.fat*q});
-    log[todayISO()]=day; ls("foodLog",log); renderTotals();
-  }
-  $("#q").oninput = e=>{
-    const q=e.target.value.toLowerCase().trim(); const res=$("#results"); res.innerHTML="";
-    if(!q) return;
-    FOODS.filter(f=>f.name.toLowerCase().includes(q)).slice(0,20).forEach(it=>{
-      const el=document.createElement("div"); el.className="item";
-      el.innerHTML = `<div><strong>${it.name}</strong> <span class="badge">per ${it.unit}</span>
-        <div class="small">kcal ${it.kcal} • P ${it.protein} • C ${it.carbs} • F ${it.fat}</div></div>
-        <div class="row"><input type="number" placeholder="Qty" value="1" style="max-width:90px"><button class="btn">Add</button></div>`;
-      const qty = el.querySelector("input");
-      el.querySelector("button").onclick = ()=>addFood(it, qty.value);
-      res.append(el);
-    });
-  };
-  $("#addCustom").onclick = ()=>{
-    const name=$("#cName").value||"Custom", unit=$("#cQty").value||"1";
-    const K=+($("#cK").value||0), P=+($("#cP").value||0), C=+($("#cC").value||0), F=+($("#cF").value||0);
-    addFood({name,unit,kcal:K,protein:P,carbs:C,fat:F},1);
-    ["cName","cQty","cK","cP","cC","cF"].forEach(id=>$("#"+id).value="");
-  };
-  renderTotals();
- },
-
- library(){
-  let html = `<section class="panel"><h2>Exercise Library</h2><div class="list">`;
-  EXERCISES.forEach(ex=>{
-    html += `<div class="item">
-      <div class="row" style="align-items:center;gap:12px">
-        <div class="svg">${ex.svg}</div>
-        <div>
-          <strong>${ex.name}</strong> <span class="badge">${ex.type}</span>
-          <div class="small" style="margin-top:4px">${ex.how}</div>
-          <div class="small" style="margin-top:6px">${ex.cues.map(c=>"• "+c).join("<br>")}</div>
-          <div class="small" style="margin-top:6px">Equipment: ${ex.equipment}</div>
-        </div>
-      </div>
-    </div>`;
-  });
-  html += `</div></section>`;
-  view.innerHTML = html;
- },
-
- settings(){
-  const s = ls("settings")||{kcal:2400,protein:180};
-  const start = ls("startDateISO");
-  view.innerHTML = `
-    <section class="panel"><h2>Settings</h2>
-      <div class="kv">
-        <label>Plan start date</label><input id="startDate" type="date" />
-        <label>Calories target</label><input id="kcal" type="number" placeholder="e.g., 2400" value="${s.kcal||2400}" />
-        <label>Protein target (g)</label><input id="protein" type="number" placeholder="e.g., 180" value="${s.protein||180}" />
-      </div>
-      <div style="height:12px"></div>
-      <button class="btn" id="save">Save</button>
-      <p class="small" style="margin-top:8px">Data is stored locally on this device (no accounts).</p>
-    </section>`;
-  if (start) $("#startDate").value = start.slice(0,10);
-  $("#save").onclick=()=>{
-    const d=$("#startDate").value; if(d) ls("startDateISO", new Date(d).toISOString());
-    const kcal=+($("#kcal").value||0), protein=+($("#protein").value||0);
-    ls("settings",{kcal,protein}); alert("Saved ✅");
-  };
- }
-};
-
-/* -------- router -------- */
-function switchView(k){
-  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.view===k));
-  (VIEWS[k]||VIEWS.home)();
-}
-document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>switchView(t.dataset.view));
-VIEWS.home();
-
-/* -------- minimal PWA (inline manifest + SW) -------- */
-const manifest = {
-  name:"Justin Workout", short_name:"Workout", start_url:".", display:"standalone",
-  background_color:"#0c0f15", theme_color:"#131a24",
-  icons:[]
-};
-const blob = new Blob([JSON.stringify(manifest)], {type: "application/manifest+json"});
-const murl = URL.createObjectURL(blob);
-const link = document.createElement('link'); link.rel='manifest'; link.href=murl; document.head.appendChild(link);
-
-if ('serviceWorker' in navigator) {
-  const swCode = `
-    const CACHE='jw-onefile-v1';
-    self.addEventListener('install', e=>{
-      e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./'])));
-      self.skipWaiting();
-    });
-    self.addEventListener('activate', e=>{
-      e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
-      self.clients.claim();
-    });
-    self.addEventListener('fetch', e=>{
-      if(e.request.method!=='GET') return;
-      e.respondWith(caches.match(e.request).then(cached=>cached||fetch(e.request).then(res=>{
-        const copy=res.clone(); caches.open(CACHE).then(c=>c.put(e.request,copy)); return res;
-      }).catch(()=>cached||caches.match('./'))));
-    });
+      <p class="small">Backfill anytime by picking a past date. Your very first saved weight is kept as the starting baseline.</p>
+    </section>
+    <section class="panel"><h2>Trend (last 3 months)</h2>
+      <canvas id="wtChart" class="chart"></canvas>
+      <div id="wtStats" class="small" style="margin-top:8px"></div>
+    </section>
+    <section class="panel"><h2>History</h2>
+      <div id="wtList" class="list"></div>
+    </section>
   `;
-  const swBlob = new Blob([swCode], {type:'text/javascript'});
-  const swUrl = URL.createObjectURL(swBlob);
-  window.addEventListener('load', ()=>navigator.serviceWorker.register(swUrl));
-}
-</script>
-</body>
-</html>
+
+  $("#saveWt").onclick = ()=>{
+    const d = $("#wtDate").value || todayISO();
+    const v = parseFloat($("#wtVal").value);
+    if (!v) return alert("Enter a number first.");
+    const arr = ls("weights") || [];
+    const idx = arr.findIndex(x=>x.date===d);
+    if (idx>=0) arr[idx].val = v; else arr.push({date:d, val:v});
+    arr.sort((a,b)=>a.date.localeCompare(b.date));
+    ls("weights", arr);
+    if (!ls("startWeight")) ls("startWeight", v);
+    render();
+    alert("Saved ✅");
+  };
+
+  function render(){
+    const arr = (ls("weights")||[]).sort((a,b)=>a.date.localeCompare(b.date));
+    const startW = ls("startWeight") ?? (arr[0]?.val ?? null);
+
+    // 3-month window
+    const end = new Date(); const start = new Date(); start.setMonth(end.getMonth()-3);
+    const windowArr = arr.filter(x=> new Date(x.date) >= start);
+
+    // List with edit/delete
+    const list = $("#wtList"); list.innerHTML="";
+    (arr.length?arr:[]).forEach((x,i)=>{
+      const el=document.createElement("div"); el.className="item";
+      el.innerHTML = `<div class="row">
+        <strong style="min-width:110px">${x.date}</strong>
+        <input type="number" step="0.1" value="${x.val}" data-i="${i}" style="max-width:120px">
+        <button class="btn btn-ghost" data-del="${i}">Delete</button>
+      </div>`;
+      list.append(el);
+    });
+    list.querySelectorAll("input[type=number]").forEach(inp=>{
+      inp.onchange=()=>{ const i=+inp.dataset.i; const arr=ls("weights")||[]; arr[i].val=parseFloat(inp.value); ls("weights",arr); draw(startW); };
+    });
+    list.querySelectorAll("[data-del]").forEach(btn=>{
+      btn.onclick=()=>{ const i=+btn.dataset.del; const arr=ls("weights")||[]; arr.splice(i,1); ls("weights",arr);
+        if (i===0){ // first removed—reset startWeight to next first if any
+          const a2=ls("weights")||[]; ls("startWeight", a2.length? a2[0].val : null);
+        }
+        render();
+      };
+    });
+
+    // Stats text
+    const last = windowArr[windowArr.length-1]?.val;
+    const weekAgo = arr.find(x=>x.date===isoOffset(-7));
+    const delta7 = (last!=null && weekAgo)? (last-weekAgo.val).toFixed(1) : null;
+    $("#wtStats").textContent = [
+      startW!=null?`Start: ${startW}`:null,
+      last!=null?`Current: ${last}`:null,
+      (delta7!=null)?`7-day change: ${delta7}`:null
+    ].filter(Boolean).join(" • ");
+
+    draw(startW);
+  }
+
+  function draw(startW){
+    const c=$("#wtChart"), ctx=c.getContext("2d");
+    const W=c.width=c.clientWidth, H=c.height=c.clientHeight;
+    ctx.clearRect(0,0,W,H);
+
+    const all=(ls("weights")||[]).sort((a,b)=>a.date.localeCompare(b.date));
+    const end=new Date(); const start=new Date(); start.setMonth(end.getMonth()-3);
+    const arr=all.filter(x=> new Date(x.date)>=start);
+    if (arr.length<2){ ctx.fillStyle="#9bb0bf"; ctx.fillText("Add a few entries to see the trend.",12,24); return; }
+
+    // 7-day moving average
+    const vals=arr.map(x=>x.val);
+    const avg7=vals.map((_,i)=>{ const s=Math.max(0,i-6), sl=vals.slice(s,i+1); return sl.reduce((a,b)=>a+b,0)/sl.length; });
+
+    const min=Math.min(...vals,...avg7), max=Math.max(...vals,...avg7);
+    const pad=(max-min)*0.1 || 1, yMin=min-pad, yMax=max+pad;
+    const xStep=W/Math.max(1,arr.length-1), y=v=>H-((v-yMin)/(yMax-yMin))*H;
+
+    // grid
+    ctx.strokeStyle="#213043"; ctx.lineWidth=1;
+    for(let i=1;i<5;i++){ const yy=(H/5)*i; ctx.beginPath(); ctx.moveTo(0,yy); ctx.lineTo(W,yy); ctx.stroke(); }
+
+    // raw
+    ctx.strokeStyle="#e8eef5"; ctx.lineWidth=2; ctx.beginPath();
+    arr.forEach((p,i)=>{ const x=i*xStep, yy=y(p.val); i?ctx.lineTo(x,yy):ctx.moveTo(x,yy); });
+    ctx.stroke();
+
+    // avg7
+    ctx.strokeStyle="#2ea043"; ctx.lineWidth=2; ctx.beginPath();
+    avg7.forEach((v,i)=>{ const x=i
