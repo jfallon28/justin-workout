@@ -776,8 +776,17 @@ function switchView(k){
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.view===k));
   (VIEWS[k]||VIEWS.home)();
 }
-document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>switchView(t.dataset.view));
-VIEWS.home();
+
+const tabsEl = document.getElementById('tabs');
+tabsEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('.tab');
+  if (!btn || !tabsEl.contains(btn)) return;
+  switchView(btn.dataset.view);
+});
+
+switchView('home');
+
+
 
 /* ===================== INLINE MANIFEST & SW ===================== */
 const manifest = { name:"Justin Workout", short_name:"Workout", start_url:".", display:"standalone",
