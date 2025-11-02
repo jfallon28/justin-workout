@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Justin Workout</title>
+<meta name="theme-color" content="#131a24" />
+<style>
+:root{
+  --bg:#0c0f15;--panel:#131a24;--accent:#2ea043;--text:#e8eef5;--muted:#93a5b1;--border:#213043;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%;font-family:-apple-system,system-ui,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text)}
+header{padding:22px 16px 8px;background:linear-gradient(180deg,var(--panel),var(--bg))}
+h1{margin:0;font-size:24px;letter-spacing:.3px}
+.subtitle{margin:4px 0 0;color:var(--muted);font-size:13px}
+nav{position:sticky;top:0;background:var(--bg);padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap}
+.tab{padding:8px 12px;border:1px solid var(--border);border-radius:12px;background:#0f1622;color:var(--text);font-weight:600;cursor:pointer}
+.tab.active{outline:2px solid var(--accent)}
+main{padding:16px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px}
+.panel h2{margin:0 0 8px;font-size:18px}
+.list{display:flex;flex-direction:column;gap:10px}
+.item{background:#101826;border:1px solid var(--border);border-radius:12px;padding:12px}
+.badge{background:var(--accent);color:#08140a;border-radius:10px;padding:2px 8px;font-weight:700;font-size:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+input,textarea,select{width:100%;background:#0e1622;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px}
+input[type=number]{max-width:120px}
+.btn{border-radius:10px;padding:10px 14px;border:1px solid var(--border);background:#162233;color:var(--text);font-weight:600;cursor:pointer}
+.btn:active{transform:scale(.98)}
+.progress{height:10px;background:#0e1622;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.progress>div{height:100%;background:var(--accent)}
+table{width:100%;border-collapse:collapse}
+td,th{border-bottom:1px solid var(--border);padding:8px;text-align:left;font-size:14px}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;align-items:center}
+footer{padding:16px;text-align:center;color:var(--muted)}
+.svg{height:80px;border:1px solid var(--border);border-radius:10px;padding:6px;background:#0e1622}
+.small{font-size:12px;color:#9bb0bf}
+</style>
+</head>
+<body>
+<header>
+  <h1>Justin Workout</h1>
+  <p class="subtitle">4-week plan • timers • 1-mile test • nutrition (offline)</p>
+</header>
+
+<nav id="tabs">
+  <button class="tab active" data-view="home">Home</button>
+  <button class="tab" data-view="today">Today</button>
+  <button class="tab" data-view="week">This Week</button>
+  <button class="tab" data-view="log">Log</button>
+  <button class="tab" data-view="test">1-Mile Test</button>
+  <button class="tab" data-view="nutrition">Nutrition</button>
+  <button class="tab" data-view="library">Library</button>
+  <button class="tab" data-view="settings">Settings</button>
+</nav>
+
+<main id="view"></main>
+<footer>© 2025 Justin — PWA</footer>
+
+<script>
+/* -------- data -------- */
+const EXERCISES = [
+  {id:"warm_walk",name:"5–10 min Easy Walk",type:"warmup",
+   how:"Walk at a pace that raises breathing but allows nasal breathing. Shoulders relaxed.",
+   cues:["Head tall","Soft steps"],equipment:"none",
+   svg:"<svg viewBox='0 0 200 120' xmlns='http://www.w3.org/2000/svg'><g fill='none' stroke='white' stroke-width='4'><circle cx='100' cy='20' r='10'/><path d='M100 30 v25'/><path d='M100 55 l-18 22'/><path d='M100 55 l18 18'/></g></svg>"
+  },
+  {id:"band_row",name:"Seated Band Row (Neutral)",type:"strength",
+   how:"Anchor band at foot level. Sit tall. Pull to ribs, 1s pause, slow return.",
+   cues:["Elbows ~45°","No shrug"],equipment:"band",
+   svg:"<svg viewBox='0 0 200 120' xmlns='http://www.w3.org/2000/svg'><g fill='none' stroke='white' stroke-width='4'><circle cx='60' cy='30' r='10'/><path d='M60 40 v25'/><path d='M80 75 l60 0' stroke='#2ea043'/></g></svg>"
+  },
+  {id:"plank_knees",name:"Plank (On Knees)",type:"core",
+   how:"Forearms on floor, knees down, ribs tucked. Quiet nasal breathing.",
+   cues:["Back flat","Elbows under shoulders"],equipment:"mat",
+   svg:"<svg viewBox='0 0 200 120' xmlns='http://www.w3.org/2000/svg'><g fill='none' stroke='white' stroke-width='4'><path d='M20 70 l60 0'/><path d='M80 70 l50 -20'/></g></svg>"
+  },
+  {id:"glute_bridge",name:"Glute Bridge",type:"strength",
+   how:"Lie on back, knees bent. Drive heels, squeeze glutes to lift hips. Pause, slow lower.",
+   cues:["Ribs down","No back arch"],equipment:"mat",
+   svg:"<svg viewBox='0 0 200 120' xmlns='http://www.w3.org/2000/svg'><g fill='none' stroke='white' stroke-width='4'><path d='M20 90 h60'/><path d='M80 90 q30 -30 60 0'/></g></svg>"
+  },
+  {id:"push_up_elev",name:"Incline Push-Up",type:"strength",
+   how:"Hands on counter/bench, body straight. Lower with control, press away.",
+   cues:["Elbows 30–45°","Squeeze glutes"],equipment:"counter",
+   svg:"<svg viewBox='0 0 200 120' xmlns='http://www.w3.org/2000/svg'><g fill='none' stroke='white' stroke-width='4'><path d='M20 90 h60'/><path d='M80 90 l60 -30'/><circle cx='140' cy='60' r='8'/></g></svg>"
+  }
+];
+
+const PLAN = {
+ weeks:[
+  {id:1, objective:"Rebuild shoulder control & core—pain-free range, easy volume.",
+   sessions:[
+    {day:"Mon",items:[["warm_walk",1,"8 min"],["band_row",3,"10"],["plank_knees",3,"20–30s"],["glute_bridge",3,"12"]]},
+    {day:"Tue",items:[["warm_walk",1,"10 min"],["plank_knees",3,"20–30s"],["glute_bridge",3,"12"]]},
+    {day:"Thu",items:[["warm_walk",1,"8 min"],["band_row",3,"10"],["plank_knees",3,"30s"],["glute_bridge",3,"12"]]},
+    {day:"Sat",items:[["warm_walk",1,"12 min"],["push_up_elev",2,"6 (pain-free)"]]}
+   ],
+   test:"Talk-test walk 15 min; rate shoulder discomfort 0–10 today and next morning."
+  },
+  {id:2, objective:"Add gentle pressing & longer holds; keep everything pain-free.",
+   sessions:[
+    {day:"Mon",items:[["warm_walk",1,"8–10 min"],["band_row",3,"12"],["push_up_elev",3,"6–8"],["plank_knees",3,"35–40s"]]},
+    {day:"Wed",items:[["warm_walk",1,"10 min"],["glute_bridge",3,"14"],["plank_knees",3,"35–40s"]]},
+    {day:"Fri",items:[["warm_walk",1,"8–10 min"],["band_row",3,"12"],["push_up_elev",3,"8–10"],["plank_knees",3,"40s"]]}
+   ],
+   challenge:"Accumulate 2:00 total plank (on knees is OK)."
+  },
+  {id:3, objective:"Progress volume; add tempo on pushes/rows.",
+   sessions:[
+    {day:"Mon",items:[["warm_walk",1,"8–12 min"],["band_row",4,"10 (2s pause)"],["push_up_elev",4,"8–10 (3s down)"],["glute_bridge",3,"16"]]},
+    {day:"Wed",items:[["warm_walk",1,"10 min"],["plank_knees",3,"45–50s"],["glute_bridge",3,"16"]]},
+    {day:"Sat",items:[["warm_walk",1,"20 min brisk"],["band_row",3,"AMRAP-2"],["push_up_elev",3,"AMRAP-2"]]}
+   ],
+   challenge:"3-day streak logging all planned sessions."
+  },
+  {id:4, objective:"Consolidate & test—optional standard plank; longer walk.",
+   sessions:[
+    {day:"Mon",items:[["warm_walk",1,"10–12 min"],["band_row",4,"12"],["push_up_elev",4,"10"],["plank_knees",3,"50–60s"]]},
+    {day:"Wed",items:[["warm_walk",1,"25 min"],["glute_bridge",3,"18"],["plank_knees",3,"50–60s"]]},
+    {day:"Fri",items:[["warm_walk",1,"20 min"],["push_up_elev",3,"AMRAP-2"],["band_row",3,"AMRAP-2"],["plank_knees",1,"Max hold"]]}
+   ],
+   test:"1-mile easy walk time; optional standard plank time; compare discomfort vs Week 1."
+  }
+ ]
+};
+
+const FOODS = [
+ {name:"Egg (large)",unit:"1 egg",kcal:72,protein:6,carbs:0.4,fat:5},
+ {name:"PBfit (2 Tbsp)",unit:"2 Tbsp",kcal:70,protein:8,carbs:4,fat:2},
+ {name:"Oatmeal (dry, 40g)",unit:"40 g",kcal:150,protein:5,carbs:27,fat:3},
+ {name:"Pizza slice (cheese)",unit:"1 slice",kcal:285,protein:12,carbs:36,fat:10},
+ {name:"Tortilla (flour)",unit:"1 tortilla",kcal:160,protein:4,carbs:26,fat:4},
+ {name:"Bagel (plain)",unit:"1 bagel",kcal:275,protein:10,carbs:55,fat:2},
+ {name:"English muffin",unit:"1 muffin",kcal:130,protein:5,carbs:25,fat:1},
+ {name:"Cheddar (28g)",unit:"28 g",kcal:113,protein:7,carbs:0.4,fat:9},
+ {name:"Ground beef 80/20 (100g)",unit:"100 g",kcal:254,protein:17,carbs:0,fat:20}
+];
+
+/* -------- helpers -------- */
+const $ = sel => document.querySelector(sel);
+const view = $("#view");
+const todayISO = () => new Date().toISOString().slice(0,10);
+const ls = (k,v) => (v===undefined? JSON.parse(localStorage.getItem(k)||"null") : localStorage.setItem(k, JSON.stringify(v)));
+
+function getWeekIndex() {
+  const startISO = ls("startDateISO") || new Date().toISOString();
+  if (!ls("startDateISO")) ls("startDateISO", startISO);
+  const start = new Date(startISO), today = new Date();
+  const diff = Math.floor((today - start)/(1000*60*60*24));
+  return Math.min(3, Math.floor(diff/7));
+}
+function weekdayName(d){return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d];}
+
+/* -------- views -------- */
+const VIEWS = {
+ home(){
+   view.innerHTML = `
+     <section class="panel"><h2>Welcome</h2>
+       <p>Tap a tab above. Try <strong>Today</strong> to log a session, or <strong>Nutrition</strong> to track calories & protein.</p>
+     </section>
+     <section class="panel"><h2>Quick Links</h2>
+       <div class="row">
+         <button class="btn" data-go="today">Today's Workout</button>
+         <button class="btn" data-go="nutrition">Nutrition</button>
+         <button class="btn" data-go="test">1-Mile Test</button>
+       </div>
+     </section>`;
+   view.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>switchView(b.dataset.go));
+ },
+
+ today(){
+  const w = PLAN.weeks[getWeekIndex()];
+  const dow = weekdayName(new Date().getDay());
+  const session = (w.sessions||[]).find(s=>s.day===dow);
+  let html = `<section class="panel"><h2>Planned Items</h2>`;
+  if (!session) {
+    html += `<p>No planned session today. Add notes and save if you did anything.</p></section>`;
+  } else {
+    html += `<div id="todayList" class="list">` +
+      session.items.map(it=>{
+        const ex = EXERCISES.find(e=>e.id===it[0]);
+        const name = ex? ex.name : it[0];
+        return `<div class="item">
+          <div><strong>${name}</strong> <span class="badge">${it[2]||""}</span></div>
+          <div class="row">
+            <input type="number" placeholder="Sets" min="0" />
+            <input type="text" placeholder="Reps/Time" />
+            <input type="checkbox" title="Done" />
+          </div>
+        </div>`;
+      }).join("") + `</div></section>`;
+  }
+  html += `
+    <section class="panel"><h2>Timer</h2>
+      <div class="row">
+        <input id="timerSec" type="number" placeholder="Seconds" />
+        <button class="btn" id="startTimer">Start</button>
+        <button class="btn" id="stopTimer">Stop</button>
+      </div>
+      <h3 id="countdown">00:00</h3>
+    </section>
+    <section class="panel"><h2>Notes</h2>
+      <textarea id="notes" rows="4" placeholder="How did it feel? Pain 0–10?"></textarea>
+      <div style="height:8px"></div>
+      <button class="btn" id="saveBtn">Save Session</button>
+    </section>`;
+  view.innerHTML = html;
+
+  // save
+  $("#saveBtn").onclick = ()=>{
+    const list = [...document.querySelectorAll("#todayList .item")];
+    const data = list.map(el=>{
+      const title = el.querySelector("strong").textContent;
+      const target = (el.querySelector(".badge")||{textContent:""}).textContent;
+      const [sets,reps,done] = el.querySelectorAll("input");
+      return {title,target,sets:sets.value,reps:reps.value,done:done.checked};
+    });
+    const entry = {date: todayISO(), data, notes: $("#notes").value};
+    const log = ls("log") || [];
+    const i = log.findIndex(x=>x.date===entry.date);
+    if (i>=0) log[i]=entry; else log.push(entry);
+    ls("log", log);
+    alert("Saved ✅");
+  };
+
+  // timer
+  let t=null, remaining=0;
+  const cd=$("#countdown");
+  const fmt=s=>{s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60), ss=String(s%60).padStart(2,"0"); return `${m}:${ss}`};
+  $("#startTimer").onclick=()=>{
+    const sec=parseInt($("#timerSec").value||"0"); if(!sec) return;
+    remaining=sec; cd.textContent=fmt(remaining);
+    if(t) clearInterval(t);
+    t=setInterval(()=>{ remaining--; cd.textContent=fmt(remaining); if(remaining<=0){ clearInterval(t); alert("Time!"); } },1000);
+  };
+  $("#stopTimer").onclick=()=>{ if(t) clearInterval(t); };
+ },
+
+ week(){
+   const w = PLAN.weeks[getWeekIndex()];
+   let html = `<section class="panel"><h2>This Week</h2><p class="small">${w.objective}</p><div class="list">`;
+   w.sessions.forEach(s=>{
+     html += `<div class="item"><strong>${s.day}</strong><ul style="margin:8px 0 0 18px">` +
+       s.items.map(it=>`<li>${it[0]} — <span class="badge">${it[2]||""}</span></li>`).join("") +
+       `</ul></div>`;
+   });
+   html += `</div></section>`;
+   view.innerHTML = html;
+ },
+
+ log(){
+  const log = (ls("log")||[]).sort((a,b)=>a.date.localeCompare(b.date));
+  let html = `<section class="panel"><h2>History</h2><div class="list">`;
+  if (!log.length) html += `<div class="item">No sessions saved yet.</div>`;
+  log.forEach(entry=>{
+    const doneCount = (entry.data||[]).filter(x=>x.done).length + "/" + (entry.data||[]).length;
+    html += `<div class="item"><strong>${entry.date}</strong><div>${doneCount} items done</div><div>${entry.notes||""}</div></div>`;
+  });
+  html += `</div></section><section class="panel"><h2>Streak</h2><p id="streak">0 days</p></section>`;
+  view.innerHTML = html;
+  // streak
+  const today = new Date(); today.setHours(0,0,0,0);
+  let streak=0;
+  for(let i=0;i<365;i++){
+    const dt=new Date(); dt.setDate(today.getDate()-i); const ds=dt.toISOString().slice(0,10);
+    const did=(ls("log")||[]).some(x=>x.date===ds && (x.data||[]).some(y=>y.done));
+    if (did) streak++; else break;
+  }
+  $("#streak").textContent = `${streak} day streak`;
+ },
+
+ test(){
+  view.innerHTML = `
+   <section class="panel"><h2>1-Mile Walk Test</h2>
+     <div class="row"><button class="btn" id="start">Start</button><button class="btn" id="stop">Stop</button></div>
+     <h2 id="timer">0:00</h2>
+   </section>
+   <section class="panel"><h2>Results</h2><div id="results" class="list"></div></section>`;
+  const tEl=$("#timer");
+  let t=null, start=0;
+  const fmt = ms => { const s=Math.floor(ms/1000), m=Math.floor(s/60), ss=String(s%60).padStart(2,"0"); return `${m}:${ss}`; };
+  $("#start").onclick=()=>{ if(t) clearInterval(t); start=Date.now(); t=setInterval(()=>{ tEl.textContent=fmt(Date.now()-start); },250); };
+  $("#stop").onclick=()=>{ if(!t) return; clearInterval(t); const ms=Date.now()-start;
+    const rec={date: todayISO(), timeSec: Math.floor(ms/1000)};
+    const tests=ls("mileTests")||[]; tests.push(rec); ls("mileTests", tests);
+    renderResults(); alert("Saved ✅");
+  };
+  function renderResults(){
+    const list = $("#results"); list.innerHTML="";
+    const tests=(ls("mileTests")||[]).sort((a,b)=>a.date.localeCompare(b.date));
+    tests.forEach(r=>{ const m=Math.floor(r.timeSec/60), s=String(r.timeSec%60).padStart(2,"0");
+      list.innerHTML += `<div class="item"><strong>${r.date}</strong> — ${m}:${s}</div>`;
+    });
+  }
+  renderResults();
+ },
+
+ nutrition(){
+  const s = ls("settings")||{kcal:2400, protein:180};
+  const kcalGoal=s.kcal||2400, proteinGoal=s.protein||180;
+  view.innerHTML = `
+    <section class="panel"><h2>Today</h2>
+      <div class="progress"><div id="kcalBar" style="width:0%"></div></div>
+      <div class="row"><div><strong id="kcalNow">0</strong> / <span>${kcalGoal}</span> kcal</div>
+      <div><strong id="proteinNow">0</strong> / <span>${proteinGoal}</span> g protein</div></div>
+    </section>
+    <section class="panel"><h2>Add Food</h2>
+      <input id="q" placeholder="Search: egg, oatmeal, pizza">
+      <div id="results" class="list"></div>
+    </section>
+    <section class="panel"><h2>Log</h2>
+      <table><thead><tr><th>Food</th><th>Qty</th><th>kcal</th><th>P</th><th>C</th><th>F</th><th></th></tr></thead>
+      <tbody id="logBody"></tbody></table>
+    </section>
+    <section class="panel"><h2>Add Custom Food</h2>
+      <div class="row">
+        <input id="cName" placeholder="Name">
+        <input id="cQty" type="number" placeholder="serving size">
+        <input id="cK" type="number" placeholder="kcal">
+        <input id="cP" type="number" placeholder="P">
+        <input id="cC" type="number" placeholder="C">
+        <input id="cF" type="number" placeholder="F">
+        <button class="btn" id="addCustom">Save</button>
+      </div>
+      <p class="small">Tip: Add your common meals here once, then reuse them fast.</p>
+    </section>`;
+  function renderTotals(){
+    const log=ls("foodLog")||{}; const day=log[todayISO()]||[];
+    let K=0,P=0,C=0,F=0; day.forEach(x=>{K+=x.kcal;P+=x.protein;C+=x.carbs;F+=x.fat;});
+    $("#kcalNow").textContent=Math.round(K); $("#proteinNow").textContent=Math.round(P);
+    $("#kcalBar").style.width = Math.min(100, Math.round((K/Math.max(1,kcalGoal))*100)) + "%";
+    const tbody=$("#logBody"); tbody.innerHTML="";
+    day.forEach((x,i)=>{
+      const tr=document.createElement("tr");
+      tr.innerHTML = `<td>${x.name}</td><td>${x.qty}</td><td>${Math.round(x.kcal)}</td><td>${Math.round(x.protein)}</td><td>${Math.round(x.carbs)}</td><td>${Math.round(x.fat)}</td><td><button data-i="${i}" class="btn btn-del">✕</button></td>`;
+      tbody.append(tr);
+    });
+    tbody.querySelectorAll(".btn-del").forEach(b=>b.onclick=()=>{
+      const idx=+b.dataset.i; day.splice(idx,1); log[todayISO()]=day; ls("foodLog",log); renderTotals();
+    });
+  }
+  function addFood(it, qty){
+    const log=ls("foodLog")||{}; const day=log[todayISO()]||[];
+    const q=Number(qty)||1;
+    day.push({name:it.name, qty:q, kcal:it.kcal*q, protein:it.protein*q, carbs:it.carbs*q, fat:it.fat*q});
+    log[todayISO()]=day; ls("foodLog",log); renderTotals();
+  }
+  $("#q").oninput = e=>{
+    const q=e.target.value.toLowerCase().trim(); const res=$("#results"); res.innerHTML="";
+    if(!q) return;
+    FOODS.filter(f=>f.name.toLowerCase().includes(q)).slice(0,20).forEach(it=>{
+      const el=document.createElement("div"); el.className="item";
+      el.innerHTML = `<div><strong>${it.name}</strong> <span class="badge">per ${it.unit}</span>
+        <div class="small">kcal ${it.kcal} • P ${it.protein} • C ${it.carbs} • F ${it.fat}</div></div>
+        <div class="row"><input type="number" placeholder="Qty" value="1" style="max-width:90px"><button class="btn">Add</button></div>`;
+      const qty = el.querySelector("input");
+      el.querySelector("button").onclick = ()=>addFood(it, qty.value);
+      res.append(el);
+    });
+  };
+  $("#addCustom").onclick = ()=>{
+    const name=$("#cName").value||"Custom", unit=$("#cQty").value||"1";
+    const K=+($("#cK").value||0), P=+($("#cP").value||0), C=+($("#cC").value||0), F=+($("#cF").value||0);
+    addFood({name,unit,kcal:K,protein:P,carbs:C,fat:F},1);
+    ["cName","cQty","cK","cP","cC","cF"].forEach(id=>$("#"+id).value="");
+  };
+  renderTotals();
+ },
+
+ library(){
+  let html = `<section class="panel"><h2>Exercise Library</h2><div class="list">`;
+  EXERCISES.forEach(ex=>{
+    html += `<div class="item">
+      <div class="row" style="align-items:center;gap:12px">
+        <div class="svg">${ex.svg}</div>
+        <div>
+          <strong>${ex.name}</strong> <span class="badge">${ex.type}</span>
+          <div class="small" style="margin-top:4px">${ex.how}</div>
+          <div class="small" style="margin-top:6px">${ex.cues.map(c=>"• "+c).join("<br>")}</div>
+          <div class="small" style="margin-top:6px">Equipment: ${ex.equipment}</div>
+        </div>
+      </div>
+    </div>`;
+  });
+  html += `</div></section>`;
+  view.innerHTML = html;
+ },
+
+ settings(){
+  const s = ls("settings")||{kcal:2400,protein:180};
+  const start = ls("startDateISO");
+  view.innerHTML = `
+    <section class="panel"><h2>Settings</h2>
+      <div class="kv">
+        <label>Plan start date</label><input id="startDate" type="date" />
+        <label>Calories target</label><input id="kcal" type="number" placeholder="e.g., 2400" value="${s.kcal||2400}" />
+        <label>Protein target (g)</label><input id="protein" type="number" placeholder="e.g., 180" value="${s.protein||180}" />
+      </div>
+      <div style="height:12px"></div>
+      <button class="btn" id="save">Save</button>
+      <p class="small" style="margin-top:8px">Data is stored locally on this device (no accounts).</p>
+    </section>`;
+  if (start) $("#startDate").value = start.slice(0,10);
+  $("#save").onclick=()=>{
+    const d=$("#startDate").value; if(d) ls("startDateISO", new Date(d).toISOString());
+    const kcal=+($("#kcal").value||0), protein=+($("#protein").value||0);
+    ls("settings",{kcal,protein}); alert("Saved ✅");
+  };
+ }
+};
+
+/* -------- router -------- */
+function switchView(k){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.view===k));
+  (VIEWS[k]||VIEWS.home)();
+}
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>switchView(t.dataset.view));
+VIEWS.home();
+
+/* -------- minimal PWA (inline manifest + SW) -------- */
+const manifest = {
+  name:"Justin Workout", short_name:"Workout", start_url:".", display:"standalone",
+  background_color:"#0c0f15", theme_color:"#131a24",
+  icons:[]
+};
+const blob = new Blob([JSON.stringify(manifest)], {type: "application/manifest+json"});
+const murl = URL.createObjectURL(blob);
+const link = document.createElement('link'); link.rel='manifest'; link.href=murl; document.head.appendChild(link);
+
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE='jw-onefile-v1';
+    self.addEventListener('install', e=>{
+      e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./'])));
+      self.skipWaiting();
+    });
+    self.addEventListener('activate', e=>{
+      e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
+      self.clients.claim();
+    });
+    self.addEventListener('fetch', e=>{
+      if(e.request.method!=='GET') return;
+      e.respondWith(caches.match(e.request).then(cached=>cached||fetch(e.request).then(res=>{
+        const copy=res.clone(); caches.open(CACHE).then(c=>c.put(e.request,copy)); return res;
+      }).catch(()=>cached||caches.match('./'))));
+    });
+  `;
+  const swBlob = new Blob([swCode], {type:'text/javascript'});
+  const swUrl = URL.createObjectURL(swBlob);
+  window.addEventListener('load', ()=>navigator.serviceWorker.register(swUrl));
+}
+</script>
+</body>
+</html>
