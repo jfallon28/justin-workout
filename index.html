@@ -789,7 +789,7 @@ const link = document.createElement('link'); link.rel='manifest'; link.href=murl
 // bump CACHE to force update if needed
 if ('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE='jw-onefile-v3';
+    const CACHE='jw-onefile-v4';
     self.addEventListener('install', e=>{
       e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./'])));
       self.skipWaiting();
