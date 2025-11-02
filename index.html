@@ -42,6 +42,7 @@ footer{padding:16px;text-align:center;color:var(--muted)}
 .ring{width:220px;height:220px;border:1px solid var(--border);border-radius:8px;background:#0e1622}
 .card{background:#101826;border:1px solid var(--border);border-radius:12px;padding:12px}
 .media{width:100%;max-width:560px;aspect-ratio:16/9;border:1px solid var(--border);border-radius:10px;background:#0e1622}
+.imgDemo{width:100%;max-width:560px;border:1px solid var(--border);border-radius:10px;background:#0e1622;display:block}
 .grid{display:grid;grid-template-columns:1fr;gap:12px}
 @media(min-width:680px){.grid{grid-template-columns:1fr 1fr}}
 .label{font-weight:700}
@@ -58,10 +59,11 @@ footer{padding:16px;text-align:center;color:var(--muted)}
   <button class="tab active" data-view="home">Home</button>
   <button class="tab" data-view="today">Today</button>
   <button class="tab" data-view="week">This Week</button>
-  <button class="tab" data-view="log">Log</button>
+  <button class="tab" data-view="log">History</button>
   <button class="tab" data-view="weight">Weight</button>
   <button class="tab" data-view="nutrition">Nutrition</button>
   <button class="tab" data-view="directory">Directory</button>
+  <button class="tab" data-view="seated">Seated</button>
   <button class="tab" data-view="measure">Measurements</button>
   <button class="tab" data-view="notes">Notes</button>
   <button class="tab" data-view="test">1-Mile Test</button>
@@ -101,18 +103,54 @@ const EXERCISES = [
   }
 ];
 
-// Activity Directory DB (add more items anytime)
+/* Directory DB (real media). Add your own items or replace links. */
 const ACTIVITY_DB = [
-  {id:"wu_arm_circles",name:"Arm Circles",category:"warmup",
-   how:"Stand tall, circle arms forward/back 10–20 reps.", cues:["Ribs down","Easy range"],
-   svg:"<svg viewBox='0 0 180 120' xmlns='http://www.w3.org/2000/svg'><g fill='none' stroke='white' stroke-width='3'><circle cx='90' cy='20' r='8'/><path d='M90 28 v28'/><path d='M90 40 l-30 10 M90 40 l30 10' stroke-dasharray='4 3'/></g></svg>",
-   video:"" // YouTube or MP4 link; leave blank if none
+  // WARM-UP
+  {
+    id:"wu_arm_circles", name:"Arm Circles", category:"warmup",
+    how:"Stand tall; circle arms forward/back 10–20 reps each.",
+    cues:["Ribs down","Easy range"], 
+    img:"https://images.unsplash.com/photo-1599058917212-d750089bc07d?q=80&w=1200&auto=format&fit=crop",
+    video:"https://www.youtube.com/watch?v=Y7xW8y3XQ0o"
   },
-  {id:"cd_box_breath",name:"Box Breathing",category:"cooldown",
-   how:"Inhale 4 • Hold 4 • Exhale 4 • Hold 4. Repeat 4–8 rounds.",
-   cues:["Quiet nose breathing","Relax shoulders"],
-   svg:"<svg viewBox='0 0 180 120' xmlns='http://www.w3.org/2000/svg'><rect x='40' y='20' width='100' height='80' rx='8' ry='8' fill='none' stroke='white' stroke-width='3'/></svg>",
-   video:""
+  {
+    id:"wu_cat_cow", name:"Cat–Cow", category:"warmup",
+    how:"On hands/knees, alternate rounding and extending spine for 8–12 reps.",
+    cues:["Slow breathe","No pinching"],
+    img:"https://images.unsplash.com/photo-1599058898302-df2f8b16d2bf?q=80&w=1200&auto=format&fit=crop",
+    video:""
+  },
+
+  // COOLDOWN
+  {
+    id:"cd_box_breath", name:"Box Breathing (4-4-4-4)", category:"cooldown",
+    how:"Inhale 4 • Hold 4 • Exhale 4 • Hold 4. Repeat 4–8 rounds.",
+    cues:["Quiet nose breathing","Relax jaw/shoulders"],
+    img:"",
+    video:"https://www.youtube.com/watch?v=F28MGLlpP90"
+  },
+
+  // SEATED / DESK
+  {
+    id:"seat_ankle_circles", name:"Seated Ankle Circles", category:"seated",
+    how:"Sit tall. Circle ankles 10x each direction per side.",
+    cues:["Knee still","Smooth motion"],
+    img:"https://images.unsplash.com/photo-1550525811-e5869dd03032?q=80&w=1200&auto=format&fit=crop",
+    video:""
+  },
+  {
+    id:"seat_pull_aparts", name:"Seated Band Pull-Apart", category:"seated",
+    how:"Hold band at chest height; pull ends apart, pause, slow return. 2–3×12.",
+    cues:["Ribs down","No shrug"],
+    img:"",
+    video:"https://www.youtube.com/watch?v=K6w5kS8QwVY"
+  },
+  {
+    id:"seat_neck", name:"Seated Neck Rotations", category:"seated",
+    how:"Rotate head left/right gently; 5–8 reps each side.",
+    cues:["Stay tall","No forcing end range"],
+    img:"",
+    video:""
   }
 ];
 
@@ -124,32 +162,28 @@ const PLAN = {
     {day:"Tue",items:[["warm_walk",1,"10 min"],["plank_knees",3,"20–30s"],["glute_bridge",3,"12"]]},
     {day:"Thu",items:[["warm_walk",1,"8 min"],["band_row",3,"10"],["plank_knees",3,"30s"],["glute_bridge",3,"12"]]},
     {day:"Sat",items:[["warm_walk",1,"12 min"],["push_up_elev",2,"6 (pain-free)"]]}
-   ],
-   test:"Talk-test walk 15 min; rate shoulder discomfort 0–10 today and next morning."
+   ]
   },
   {id:2, objective:"Add gentle pressing & longer holds; keep everything pain-free.",
    sessions:[
     {day:"Mon",items:[["warm_walk",1,"8–10 min"],["band_row",3,"12"],["push_up_elev",3,"6–8"],["plank_knees",3,"35–40s"]]},
     {day:"Wed",items:[["warm_walk",1,"10 min"],["glute_bridge",3,"14"],["plank_knees",3,"35–40s"]]},
     {day:"Fri",items:[["warm_walk",1,"8–10 min"],["band_row",3,"12"],["push_up_elev",3,"8–10"],["plank_knees",3,"40s"]]}
-   ],
-   challenge:"Accumulate 2:00 total plank (on knees is OK)."
+   ]
   },
   {id:3, objective:"Progress volume; add tempo on pushes/rows.",
    sessions:[
     {day:"Mon",items:[["warm_walk",1,"8–12 min"],["band_row",4,"10 (2s pause)"],["push_up_elev",4,"8–10 (3s down)"],["glute_bridge",3,"16"]]},
     {day:"Wed",items:[["warm_walk",1,"10 min"],["plank_knees",3,"45–50s"],["glute_bridge",3,"16"]]},
     {day:"Sat",items:[["warm_walk",1,"20 min brisk"],["band_row",3,"AMRAP-2"],["push_up_elev",3,"AMRAP-2"]]}
-   ],
-   challenge:"3-day streak logging all planned sessions."
+   ]
   },
   {id:4, objective:"Consolidate & test—optional standard plank; longer walk.",
    sessions:[
     {day:"Mon",items:[["warm_walk",1,"10–12 min"],["band_row",4,"12"],["push_up_elev",4,"10"],["plank_knees",3,"50–60s"]]},
     {day:"Wed",items:[["warm_walk",1,"25 min"],["glute_bridge",3,"18"],["plank_knees",3,"50–60s"]]},
     {day:"Fri",items:[["warm_walk",1,"20 min"],["push_up_elev",3,"AMRAP-2"],["band_row",3,"AMRAP-2"],["plank_knees",1,"Max hold"]]}
-   ],
-   test:"1-mile easy walk time; optional standard plank time; compare discomfort vs Week 1."
+   ]
   }
  ]
 };
@@ -191,7 +225,7 @@ const VIEWS = {
      </section>
      <section class="panel grid">
        <div class="card">
-         <h3>Quick Add (Today)</h3>
+         <h3>Quick Add</h3>
          <div class="row">
            <button class="btn" data-go="today">Today's Workout</button>
            <button class="btn" data-go="nutrition">Nutrition</button>
@@ -244,7 +278,6 @@ const VIEWS = {
     </section>`;
   view.innerHTML = html;
 
-  // save
   $("#saveBtn").onclick = ()=>{
     const list = [...document.querySelectorAll("#todayList .item")];
     const data = list.map(el=>{
@@ -261,7 +294,6 @@ const VIEWS = {
     alert("Saved ✅");
   };
 
-  // timer
   let t=null, remaining=0;
   const cd=$("#countdown");
   const fmt=s=>{s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60), ss=String(s%60).padStart(2,"0"); return `${m}:${ss}`};
@@ -296,7 +328,7 @@ const VIEWS = {
   });
   html += `</div></section><section class="panel"><h2>Streak</h2><p id="streak">0 days</p></section>`;
   view.innerHTML = html;
-  // streak
+
   const today = new Date(); today.setHours(0,0,0,0);
   let streak=0;
   for(let i=0;i<365;i++){
@@ -307,7 +339,7 @@ const VIEWS = {
   $("#streak").textContent = `${streak} day streak`;
  },
 
- /* ---------- NEW: WEIGHT (3-month window, editable/backfill) ---------- */
+ /* ---------- WEIGHT (keeps starting weight; 3-month window; backfill/edit) ---------- */
  weight(){
   const weights = ls("weights")||[]; // [{date:'YYYY-MM-DD', val:Number}]
   if (!ls("startWeight") && weights.length) ls("startWeight", weights[0].val);
@@ -319,7 +351,7 @@ const VIEWS = {
         <input id="wtVal" type="number" step="0.1" placeholder="Weight (lbs or kg)">
         <button class="btn" id="saveWt">Save</button>
       </div>
-      <p class="small">Backfill anytime by picking a past date. Your very first saved weight is kept as the starting baseline.</p>
+      <p class="small">Backfill by choosing a past date. Your first saved weight is kept as the baseline.</p>
     </section>
     <section class="panel"><h2>Trend (last 3 months)</h2>
       <canvas id="wtChart" class="chart"></canvas>
@@ -348,11 +380,9 @@ const VIEWS = {
     const arr = (ls("weights")||[]).sort((a,b)=>a.date.localeCompare(b.date));
     const startW = ls("startWeight") ?? (arr[0]?.val ?? null);
 
-    // 3-month window
     const end = new Date(); const start = new Date(); start.setMonth(end.getMonth()-3);
     const windowArr = arr.filter(x=> new Date(x.date) >= start);
 
-    // List with edit/delete
     const list = $("#wtList"); list.innerHTML="";
     (arr.length?arr:[]).forEach((x,i)=>{
       const el=document.createElement("div"); el.className="item";
@@ -368,14 +398,11 @@ const VIEWS = {
     });
     list.querySelectorAll("[data-del]").forEach(btn=>{
       btn.onclick=()=>{ const i=+btn.dataset.del; const arr=ls("weights")||[]; arr.splice(i,1); ls("weights",arr);
-        if (i===0){ // first removed—reset startWeight to next first if any
-          const a2=ls("weights")||[]; ls("startWeight", a2.length? a2[0].val : null);
-        }
+        if (i===0){ const a2=ls("weights")||[]; ls("startWeight", a2.length? a2[0].val : null); }
         render();
       };
     });
 
-    // Stats text
     const last = windowArr[windowArr.length-1]?.val;
     const weekAgo = arr.find(x=>x.date===isoOffset(-7));
     const delta7 = (last!=null && weekAgo)? (last-weekAgo.val).toFixed(1) : null;
@@ -398,7 +425,6 @@ const VIEWS = {
     const arr=all.filter(x=> new Date(x.date)>=start);
     if (arr.length<2){ ctx.fillStyle="#9bb0bf"; ctx.fillText("Add a few entries to see the trend.",12,24); return; }
 
-    // 7-day moving average
     const vals=arr.map(x=>x.val);
     const avg7=vals.map((_,i)=>{ const s=Math.max(0,i-6), sl=vals.slice(s,i+1); return sl.reduce((a,b)=>a+b,0)/sl.length; });
 
@@ -406,21 +432,17 @@ const VIEWS = {
     const pad=(max-min)*0.1 || 1, yMin=min-pad, yMax=max+pad;
     const xStep=W/Math.max(1,arr.length-1), y=v=>H-((v-yMin)/(yMax-yMin))*H;
 
-    // grid
     ctx.strokeStyle="#213043"; ctx.lineWidth=1;
     for(let i=1;i<5;i++){ const yy=(H/5)*i; ctx.beginPath(); ctx.moveTo(0,yy); ctx.lineTo(W,yy); ctx.stroke(); }
 
-    // raw
     ctx.strokeStyle="#e8eef5"; ctx.lineWidth=2; ctx.beginPath();
     arr.forEach((p,i)=>{ const x=i*xStep, yy=y(p.val); i?ctx.lineTo(x,yy):ctx.moveTo(x,yy); });
     ctx.stroke();
 
-    // avg7
     ctx.strokeStyle="#2ea043"; ctx.lineWidth=2; ctx.beginPath();
     avg7.forEach((v,i)=>{ const x=i*xStep, yy=y(v); i?ctx.lineTo(x,yy):ctx.moveTo(x,yy); });
     ctx.stroke();
 
-    // starting baseline
     if (startW!=null){
       ctx.strokeStyle="#7f95a6"; ctx.setLineDash([6,4]); ctx.beginPath();
       const yy=y(startW); ctx.moveTo(0,yy); ctx.lineTo(W,yy); ctx.stroke(); ctx.setLineDash([]);
@@ -430,7 +452,7 @@ const VIEWS = {
   render();
  },
 
- /* ---------- NUTRITION with MACRO RING ---------- */
+ /* ---------- NUTRITION with MACRO RING + CRONOMETER IMPORT ---------- */
  nutrition(){
   const s = ls("settings")||{kcal:2400, protein:180};
   const kcalGoal=s.kcal||2400, proteinGoal=s.protein||180;
@@ -468,6 +490,14 @@ const VIEWS = {
         <button class="btn" id="addCustom">Save</button>
       </div>
       <p class="small">Tip: Add your common meals here once, then reuse them fast.</p>
+    </section>
+    <section class="panel">
+      <h2>Import from Cronometer (CSV)</h2>
+      <p class="small">Cronometer → Settings → Account → <b>Export Data</b> → Export <b>Diary</b> or <b>Servings</b> as CSV. Then import it here.</p>
+      <div class="row">
+        <input id="cronoFile" type="file" accept=".csv">
+        <button class="btn" id="cronoImport">Import CSV</button>
+      </div>
     </section>`;
 
   function totals(){
@@ -496,7 +526,6 @@ const VIEWS = {
     const c=$("#macroRing"), ctx=c.getContext("2d"); const W=c.width=c.clientWidth, H=c.height=c.clientHeight, R=Math.min(W,H)/2-12;
     ctx.clearRect(0,0,W,H); const cx=W/2, cy=H/2; const parts=[{v:t.p,label:"P",col:"#e8eef5"},{v:t.c,label:"C",col:"#2ea043"},{v:t.f,label:"F",col:"#7f95a6"}];
     let a0=-Math.PI/2; parts.forEach(p=>{ const ang=(p.v/sum)*Math.PI*2; ctx.beginPath(); ctx.strokeStyle=p.col; ctx.lineWidth=24; ctx.arc(cx,cy,R,a0,a0+ang); ctx.stroke(); a0+=ang; });
-    // center hole
     ctx.beginPath(); ctx.fillStyle="#0e1622"; ctx.arc(cx,cy,R-20,0,Math.PI*2); ctx.fill();
     ctx.fillStyle="#c9d7e1"; ctx.textAlign="center"; ctx.font="14px system-ui"; ctx.fillText("Macros", cx, cy-6);
     ctx.font="18px system-ui"; ctx.fillText(`${Math.round(t.p)}/${Math.round(sum)} g P`, cx, cy+18);
@@ -522,56 +551,158 @@ const VIEWS = {
     ["cName","cQty","cK","cP","cC","cF"].forEach(id=>$("#"+id).value="");
   };
 
+  // Cronometer CSV import
+  $("#cronoImport").onclick = async ()=>{
+    const f = $("#cronoFile").files?.[0];
+    if(!f) return alert("Choose a Cronometer CSV file first.");
+    const text = await f.text();
+    const rows = text.split(/\r?\n/).filter(x=>x.trim().length);
+    const header = rows.shift().split(",").map(h=>h.replace(/^"|"$/g,"").trim().toLowerCase());
+
+    const idx = name=>header.findIndex(h=>h.includes(name));
+    const iDate = idx("time")>=0? idx("time") : idx("date");
+    const iFood = idx("food")>=0? idx("description") : -1;
+    const iKcal = (idx("energy (kcal)")>=0? idx("energy (kcal)") : idx("calories"));
+    const iP = idx("protein");
+    const iC = (idx("carb")>=0? idx("carb") : idx("carbo"));
+    const iF = idx("fat");
+
+    if (iDate<0 || iFood<0) return alert("Couldn’t find Date/Food columns in this CSV.");
+
+    const log = ls("foodLog")||{};
+    rows.forEach(line=>{
+      const cols = splitCSV(line);
+      const dateRaw = (cols[iDate]||"").replace(/^"|"$/g,"");
+      const dateISO = toDateISO(dateRaw);
+      if(!dateISO) return;
+      const item = {
+        name: (cols[iFood]||"Food").replace(/^"|"$/g,""),
+        qty: 1,
+        kcal: +((cols[iKcal]||"0").replace(/[^0-9.\-]/g,"")) || 0,
+        protein: +((cols[iP]||"0").replace(/[^0-9.\-]/g,"")) || 0,
+        carbs: +((cols[iC]||"0").replace(/[^0-9.\-]/g,"")) || 0,
+        fat: +((cols[iF]||"0").replace(/[^0-9.\-]/g,"")) || 0
+      };
+      log[dateISO] = log[dateISO]||[];
+      log[dateISO].push(item);
+    });
+    ls("foodLog", log);
+    alert("Cronometer data imported ✅  Open each date to verify.");
+    renderTotals(); drawRing();
+  };
+
+  function splitCSV(str){
+    const out=[]; let cur="", q=false;
+    for(let i=0;i<str.length;i++){
+      const ch=str[i];
+      if(ch==='"' ){ q=!q; continue; }
+      if(ch===',' && !q){ out.push(cur); cur=""; continue; }
+      cur+=ch;
+    }
+    out.push(cur);
+    return out;
+  }
+  function toDateISO(s){
+    s = s.trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+    const m = s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+    if (m){
+      const mm = m[1].padStart(2,'0'), dd = m[2].padStart(2,'0');
+      const yyyy = m[3].length===2 ? ('20'+m[3]) : m[3];
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    const d = new Date(s); if(!isNaN(d)) return d.toISOString().slice(0,10);
+    return null;
+  }
+
   renderTotals(); drawRing();
  },
 
- /* ---------- DIRECTORY (searchable; pics + optional video) ---------- */
+ /* ---------- DIRECTORY (real images/videos + search) ---------- */
  directory(){
-   view.innerHTML = `
-     <section class="panel"><h2>Directory</h2>
-       <div class="row">
-         <input id="dSearch" placeholder="Search exercises, warm-ups, cooldowns…">
-         <select id="dFilter"><option value="">All</option><option value="warmup">Warm-up</option><option value="strength">Workout</option><option value="core">Workout (core)</option><option value="cooldown">Cooldown</option></select>
-       </div>
-     </section>
-     <section class="panel"><div id="dList" class="list"></div></section>
-     <section class="panel"><h2>How to add videos</h2>
-       <p class="small">Edit the <strong>ACTIVITY_DB</strong> at the top of this file. Put a YouTube share link or MP4 in the <code>video</code> field. The card will embed it automatically.</p>
-     </section>
-   `;
-   function matches(q, item){
-     q=q.toLowerCase(); return !q || item.name.toLowerCase().includes(q) || (item.how||"").toLowerCase().includes(q);
-   }
-   function render(){
-     const q=$("#dSearch").value||""; const f=$("#dFilter").value||"";
-     const base=[...EXERCISES.map(x=>({id:x.id,name:x.name,category:x.type,how:x.how,cues:x.cues,svg:x.svg,video:""})),...ACTIVITY_DB];
-     const list=$("#dList"); list.innerHTML="";
-     base.filter(x=>matches(q,x) && (!f || x.category===f)).forEach(x=>{
-       const el=document.createElement("div"); el.className="item";
-       el.innerHTML = `
-         <div class="row" style="align-items:center;gap:12px">
-           <div class="svg">${x.svg||""}</div>
-           <div style="flex:1">
-             <div><strong>${x.name}</strong> <span class="tag">${x.category||"activity"}</span></div>
-             <div class="small" style="margin-top:6px">${x.how||""}</div>
-             <div class="small" style="margin-top:6px">${(x.cues||[]).map(c=>"• "+c).join("<br>")}</div>
-           </div>
-         </div>
-         ${x.video? embedVideo(x.video) : ""}`;
-       list.append(el);
-     });
-   }
-   function embedVideo(url){
-     if (/youtube\.com|youtu\.be/.test(url)){
-       const id = (url.match(/(?:v=|be\/)([A-Za-z0-9_\-]+)/)||[])[1] || "";
-       return `<div class="media" style="margin-top:10px"><iframe width="100%" height="100%" src="https://www.youtube.com/embed/${id}" frameborder="0" allowfullscreen></iframe></div>`;
-     }
-     return `<video class="media" style="margin-top:10px" src="${url}" controls></video>`;
-   }
-   $("#dSearch").oninput=render; $("#dFilter").onchange=render; render();
+  view.innerHTML = `
+    <section class="panel"><h2>Directory</h2>
+      <div class="row">
+        <input id="dSearch" placeholder="Search activities…">
+        <select id="dFilter">
+          <option value="">All</option>
+          <option value="warmup">Warm-up</option>
+          <option value="strength">Workout</option>
+          <option value="core">Workout (core)</option>
+          <option value="cooldown">Cooldown</option>
+          <option value="seated">Seated</option>
+        </select>
+      </div>
+    </section>
+    <section class="panel"><div id="dList" class="list"></div></section>
+    <section class="panel"><h2>Add your own media</h2>
+      <p class="small">Edit <b>ACTIVITY_DB</b> at the top. Use <code>img</code> for a photo, and <code>video</code> for a YouTube or MP4 link.</p>
+    </section>
+  `;
+  function matches(q, item){
+    q=q.toLowerCase();
+    return !q || item.name.toLowerCase().includes(q) || (item.how||"").toLowerCase().includes(q) || (item.cues||[]).join(" ").toLowerCase().includes(q);
+  }
+  function embedVideo(url){
+    if (!url) return "";
+    if (/youtube\.com|youtu\.be/.test(url)){
+      const id = (url.match(/(?:v=|be\/)([A-Za-z0-9_\-]+)/)||[])[1] || "";
+      return `<div class="media" style="margin-top:10px"><iframe width="100%" height="100%" src="https://www.youtube.com/embed/${id}" frameborder="0" allowfullscreen></iframe></div>`;
+    }
+    return `<video class="media" style="margin-top:10px" src="${url}" controls></video>`;
+  }
+  function render(){
+    const q=$("#dSearch").value||""; const f=$("#dFilter").value||"";
+    const base=[...EXERCISES.map(x=>({id:x.id,name:x.name,category:x.type,how:x.how,cues:x.cues,svg:x.svg,img:"",video:""})),...ACTIVITY_DB];
+    const list=$("#dList"); list.innerHTML="";
+    base.filter(x=>matches(q,x) && (!f || x.category===f)).forEach(x=>{
+      const media = x.img ? `<img class="imgDemo" src="${x.img}" alt="">`
+                 : x.svg ? `<div class="svg">${x.svg}</div>` : "";
+      const vid = embedVideo(x.video);
+      const el=document.createElement("div"); el.className="item";
+      el.innerHTML = `
+        <div class="row" style="align-items:start;gap:12px">
+          <div style="flex:1;min-width:220px">
+            <div><strong>${x.name}</strong> <span class="tag">${x.category||"activity"}</span></div>
+            <div class="small" style="margin-top:6px">${x.how||""}</div>
+            <div class="small" style="margin-top:6px">${(x.cues||[]).map(c=>"• "+c).join("<br>")}</div>
+          </div>
+          <div style="flex:1;min-width:240px">${media}${vid}</div>
+        </div>`;
+      list.append(el);
+    });
+  }
+  $("#dSearch").oninput=render; $("#dFilter").onchange=render; render();
  },
 
- /* ---------- MEASUREMENTS with body diagram ---------- */
+ /* ---------- SEATED view ---------- */
+ seated(){
+  view.innerHTML = `
+    <section class="panel"><h2>Seated / Desk Drills</h2>
+      <p class="small">Great while working at a computer or watching TV. Aim for 2–5 minutes each hour.</p>
+      <div class="row"><input id="sSearch" placeholder="Search seated drills…"></div>
+    </section>
+    <section class="panel"><div id="sList" class="list"></div></section>
+  `;
+  function render(){
+    const q=$("#sSearch").value?.toLowerCase()||"";
+    const items = ACTIVITY_DB.filter(x=>x.category==="seated" && (!q || x.name.toLowerCase().includes(q) || (x.how||"").toLowerCase().includes(q)));
+    const list=$("#sList"); list.innerHTML="";
+    if(!items.length){ list.innerHTML = `<div class="item">No seated drills yet.</div>`; return; }
+    items.forEach(x=>{
+      const media = x.img ? `<img class="imgDemo" src="${x.img}" alt="">` : "";
+      const vid = x.video ? (/youtu/.test(x.video)
+        ? `<div class="media" style="margin-top:10px"><iframe width="100%" height="100%" src="https://www.youtube.com/embed/${(x.video.match(/(?:v=|be\/)([A-Za-z0-9_\-]+)/)||[])[1]||""}" frameborder="0" allowfullscreen></iframe></div>`
+        : `<video class="media" style="margin-top:10px" src="${x.video}" controls></video>`) : "";
+      const el=document.createElement("div"); el.className="item";
+      el.innerHTML = `<div><strong>${x.name}</strong></div><div class="small" style="margin-top:6px">${x.how||""}</div>${media}${vid}`;
+      list.append(el);
+    });
+  }
+  $("#sSearch").oninput=render; render();
+ },
+
+ /* ---------- MEASUREMENTS with crisp body diagram ---------- */
  measure(){
   view.innerHTML = `
     <section class="panel grid">
@@ -624,27 +755,41 @@ const VIEWS = {
     });
   }
   function bodySVG(){
-    return `<svg viewBox="0 0 220 360" width="100%" xmlns="http://www.w3.org/2000/svg" style="background:#0e1622;border:1px solid var(--border);border-radius:10px">
-      <g fill="none" stroke="#9bb0bf" stroke-width="2">
-        <path d="M110 20 q-20 10 -22 32 q-4 25 -12 40 q-10 18 -10 40 v60 q0 40 14 70 q10 20 30 30 q20 -10 30 -30 q14 -30 14 -70 v-60 q0 -22 -10 -40 q-8 -15 -12 -40 q-2 -22 -22 -32" />
-        <circle cx="110" cy="20" r="10"/>
-      </g>
-      <!-- measurement bands -->
-      <g stroke="#2ea043" stroke-width="3">
-        <line x1="60" y1="50" x2="160" y2="50"/><text x="165" y="52" fill="#e8eef5" font-size="10">Neck</text>
-        <line x1="40" y1="100" x2="180" y2="100"/><text x="185" y="102" fill="#e8eef5" font-size="10">Chest</text>
-        <line x1="55" y1="150" x2="165" y2="150"/><text x="170" y="152" fill="#e8eef5" font-size="10">Waist</text>
-        <line x1="40" y1="190" x2="180" y2="190"/><text x="185" y="192" fill="#e8eef5" font-size="10">Hips</text>
-        <line x1="30" y1="250" x2="95" y2="250"/><text x="20" y="248" fill="#e8eef5" font-size="10">Thigh</text>
-        <line x1="125" y1="250" x2="190" y2="250"/><text x="192" y="248" fill="#e8eef5" font-size="10">Thigh</text>
-        <line x1="35" y1="300" x2="90" y2="300"/><text x="22" y="302" fill="#e8eef5" font-size="10">Calf</text>
-        <line x1="130" y1="300" x2="185" y2="300"/><text x="188" y="302" fill="#e8eef5" font-size="10">Calf</text>
-        <line x1="25" y1="140" x2="70" y2="140"/><text x="10" y="142" fill="#e8eef5" font-size="10">Bicep</text>
-        <line x1="150" y1="140" x2="195" y2="140"/><text x="198" y="142" fill="#e8eef5" font-size="10">Bicep</text>
-        <line x1="20" y1="165" x2="65" y2="165"/><text x="3" y="167" fill="#e8eef5" font-size="10">Forearm</text>
-        <line x1="155" y1="165" x2="200" y2="165"/><text x="202" y="167" fill="#e8eef5" font-size="10">Forearm</text>
-      </g>
-    </svg>`;
+    return `
+  <svg viewBox="0 0 240 360" width="100%" xmlns="http://www.w3.org/2000/svg" style="background:#0e1622;border:1px solid var(--border);border-radius:10px">
+    <g fill="none" stroke="#c3d1dc" stroke-width="2">
+      <circle cx="120" cy="26" r="12"/>
+      <path d="M120 38 q-20 10 -22 32 q-4 25 -12 40 q-10 18 -10 40 v60 q0 40 14 70 q10 20 30 30 q20 -10 30 -30 q14 -30 14 -70 v-60 q0 -22 -10 -40 q-8 -15 -12 -40 q-2 -22 -22 -32" />
+    </g>
+    <g stroke="#2ea043" stroke-width="3">
+      <line x1="60" y1="58" x2="180" y2="58"/>
+      <line x1="40" y1="102" x2="200" y2="102"/>
+      <line x1="55" y1="148" x2="185" y2="148"/>
+      <line x1="40" y1="190" x2="200" y2="190"/>
+      <line x1="28" y1="252" x2="98" y2="252"/>
+      <line x1="142" y1="252" x2="212" y2="252"/>
+      <line x1="35" y1="300" x2="95" y2="300"/>
+      <line x1="145" y1="300" x2="205" y2="300"/>
+      <line x1="20" y1="136" x2="70" y2="136"/>
+      <line x1="170" y1="136" x2="220" y2="136"/>
+      <line x1="16" y1="162" x2="66" y2="162"/>
+      <line x1="174" y1="162" x2="224" y2="162"/>
+    </g>
+    <g fill="#e8eef5" font-size="12" font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial">
+      <text x="184" y="56">Neck</text>
+      <text x="204" y="100">Chest</text>
+      <text x="190" y="146">Waist</text>
+      <text x="204" y="188">Hips</text>
+      <text x="12"  y="134">Bicep</text>
+      <text x="224" y="134" text-anchor="end">Bicep</text>
+      <text x="10"  y="160">Forearm</text>
+      <text x="226" y="160" text-anchor="end">Forearm</text>
+      <text x="22"  y="250">Thigh</text>
+      <text x="218" y="250" text-anchor="end">Thigh</text>
+      <text x="20"  y="298">Calf</text>
+      <text x="220" y="298" text-anchor="end">Calf</text>
+    </g>
+  </svg>`;
   }
   render();
  },
@@ -653,9 +798,7 @@ const VIEWS = {
  notes(){
    view.innerHTML = `
     <section class="panel"><h2>Notes</h2>
-      <div class="row">
-        <input id="nDate" type="date" value="${todayISO()}">
-      </div>
+      <div class="row"><input id="nDate" type="date" value="${todayISO()}"></div>
       <textarea id="nText" rows="4" placeholder="Write your note…"></textarea>
       <div style="height:8px"></div>
       <button class="btn" id="saveN">Save Note</button>
@@ -735,7 +878,6 @@ const VIEWS = {
     ls("settings",{kcal,protein}); alert("Saved ✅");
   };
 
-  // Export
   $("#exportBtn").onclick = ()=>{
     const dump = {
       log: ls("log")||[],
@@ -755,7 +897,6 @@ const VIEWS = {
     a.click();
   };
 
-  // Import
   $("#importBtn").onclick = ()=> $("#importFile").click();
   $("#importFile").onchange = async (e)=>{
     const file = e.target.files[0]; if (!file) return;
@@ -776,17 +917,13 @@ function switchView(k){
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.view===k));
   (VIEWS[k]||VIEWS.home)();
 }
-
 const tabsEl = document.getElementById('tabs');
-tabsEl.addEventListener('click', (e) => {
+tabsEl.addEventListener('click', (e)=>{
   const btn = e.target.closest('.tab');
   if (!btn || !tabsEl.contains(btn)) return;
   switchView(btn.dataset.view);
 });
-
 switchView('home');
-
-
 
 /* ===================== INLINE MANIFEST & SW ===================== */
 const manifest = { name:"Justin Workout", short_name:"Workout", start_url:".", display:"standalone",
@@ -798,7 +935,7 @@ const link = document.createElement('link'); link.rel='manifest'; link.href=murl
 // bump CACHE to force update if needed
 if ('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE='jw-onefile-v4';
+    const CACHE='jw-onefile-v6';
     self.addEventListener('install', e=>{
       e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./'])));
       self.skipWaiting();
